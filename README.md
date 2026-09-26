@@ -54,8 +54,10 @@ The `1×` button in the header cycles the simulation speed through 1×, 4× and 
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app works today and the planned design for real
-market data, analysis, paper trading and automated trading on a Hetzner server.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app works today and the planned design:
+real DEX prices (starting on Base), analysis, wallet sign-in for the Zomi community, paper trading and,
+later, automated trading, all on a Hetzner server at cimphawng.com. It's non-custodial: members always
+keep and sign for their own coins.
 
 ## Run it
 
