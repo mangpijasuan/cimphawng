@@ -34,6 +34,24 @@ as profit whatever the outcome. That's the game the bot plays:
   If you reload mid-round, open bot trades are refunded at cost.
 - **Reset to $100** starts over.
 
+## Phone view
+
+On phones (screens up to 760px wide) the terminal turns into an app-style layout:
+
+- **Top chips:** your pretend wallet total, the live ETH price and the CIMP price. Tap a chip to jump to its tab.
+- **Rounded cards** for every stat and button, in a softer font.
+- **A floating tab bar** with five screens:
+
+| Tab | Shows |
+|---|---|
+| **Inn** (Home) | Your $100 pretend wallet |
+| **Market** | Real Base DEX prices (ETH, cbBTC) |
+| **CIMP** | The simulated CIMP price, order book and round |
+| **Bot** | The bot's wallet and trading charts |
+| **AI** | The neural-shell animation |
+
+Only the open tab's charts are drawn, which saves battery. The app remembers the last tab you used. Desktop keeps the full terminal.
+
 ## Base DEX live prices (real data)
 
 The **Base DEX** panel shows **real** prices for **ETH** and **cbBTC** in US dollars, from their most active

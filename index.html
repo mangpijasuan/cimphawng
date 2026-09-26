@@ -6,7 +6,7 @@
 <title>Cimphawng Terminal</title>
 <meta name="description" content="A simulated, sci-fi style trading bot dashboard for the fictional CIMP token. Hobby project — no real trading.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #04070a;
@@ -161,6 +161,96 @@
     .hdr-stats { margin-left: 0; gap: 10px; }
     .pnl { font-size: 30px; }
   }
+  /* ---------- phone app view (tabs + cards), desktop stays a terminal ---------- */
+  .tabbar, .ico { display: none; }
+  @media (max-width: 760px) {
+    :root { --mbg: #13141f; --card: #1e2030; --card2: #2a2d42; --mgreen: #5ad67d; --mblue: #7fb8ff; --morange: #f5a524; }
+    html, body { background: var(--mbg); }
+    body { font-family: "Poppins", system-ui, -apple-system, sans-serif; font-size: 13px; letter-spacing: 0;
+           padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+    body::after { display: none; }
+
+    /* top chips */
+    header { position: sticky; top: 0; z-index: 20; background: var(--mbg); border: 0; padding: 12px 16px 10px;
+             flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 10px; }
+    header::-webkit-scrollbar { display: none; }
+    .brand, .hs-up, .hs-dn, .hs-sum, #h-clock, .feed, .hdr-stats .lbl { display: none; }
+    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #4b2bb0;
+            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #6d4ee6; }
+    .hdr-stats { margin: 0; flex-wrap: nowrap; gap: 10px; }
+    .hdr-stats > .chip, .hdr-stats > button { flex: none; height: 50px; padding: 0 14px; border-radius: 16px; background: #181a28;
+            border: 2px solid var(--card2); display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #fff; cursor: pointer; }
+    .hdr-stats > button { font-size: 13px; }
+    .hdr-stats b { margin: 0; font-weight: 600; color: #fff !important; }
+    .hs-me { order: -3; border-color: #2e7a47 !important; } .hs-me .ico { color: var(--mgreen); }
+    .hs-eth { order: -2; border-color: #33507a !important; } .hs-eth .ico { color: var(--mblue); }
+    .hs-spot { order: -1; border-color: #7a5520 !important; } .hs-spot .ico { color: var(--morange); }
+    .ico { display: block; width: 22px; height: 22px; }
+
+    /* news as a rounded toast */
+    .news { margin: 0 16px 10px; border: 0; border-radius: 16px; font-size: 13px; }
+
+    /* sections become screens of cards */
+    main.grid { padding: 4px 16px 0; gap: 16px; }
+    .panel { background: transparent; border: 0 !important; padding: 0; box-shadow: none !important; }
+    .panel h2 { font-size: 22px; font-weight: 700; text-transform: none; color: #fff; margin: 6px 0 14px; gap: 12px; }
+    .panel h2::before { content: "★"; flex: none; display: grid; place-items: center; width: 38px; height: 38px;
+                        border-radius: 12px; background: var(--mgreen); color: var(--mbg); font-size: 16px; }
+    .panel h2 span { display: none; }
+    .live { border-radius: 10px; padding: 2px 8px; font-size: 10px; font-style: normal; }
+    .muted { font-size: 11px; }
+    canvas { background: var(--card); border-radius: 16px; }
+
+    .me-total { font-size: 36px; }
+    .kv { gap: 10px; margin: 12px 0; }
+    .kv > div { background: var(--card); border-radius: 14px; padding: 10px 12px; }
+    .kv div span { font-size: 10px; }
+    .kv div b { font-size: 16px; }
+    .btns { gap: 8px; margin: 6px 0 14px; }
+    .btns button { flex: 1; padding: 12px 6px; border: 0; border-radius: 14px; background: var(--card); font-size: 14px; font-weight: 600; }
+    .btns button.g { color: var(--mgreen); } .btns button.r { color: #ff6b81; } .btns button.c { color: var(--mblue); }
+    .btns button.dim { color: #8b90a8; }
+    .btns button.c.on { background: var(--mgreen); color: #0c1a11; box-shadow: 0 4px 0 #3a9d57; }
+    .hist li { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; white-space: normal; font-size: 12px; }
+    .risk .riskbar, .riskbar i { border-radius: 4px; }
+
+    .split { grid-template-columns: 1fr; }
+    .side { border: 0; padding: 0; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+    .side > div { flex: 1 1 40%; background: var(--card); border-radius: 12px; padding: 8px 10px; }
+
+    button.dcard { border-radius: 16px; background: var(--card); border: 2px solid transparent; padding: 12px; }
+    button.dcard.on { border-color: var(--mgreen); box-shadow: none; }
+    .tfs { gap: 6px; }
+    .tfs button { flex: 1; padding: 7px 0; border: 0; border-radius: 10px; background: var(--card); font-weight: 600; }
+    .tfs button.on { background: var(--mgreen); color: #0c1a11; }
+    table.trades, table.book { border-collapse: separate; border-spacing: 0; background: var(--card); border-radius: 16px; padding: 6px; font-size: 11px; }
+
+    .tiles { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .tile { background: var(--card); border: 0; border-radius: 16px; padding: 12px; }
+    .tile.hot { box-shadow: inset 0 0 0 2px var(--red); }
+    footer { padding: 16px; }
+
+    /* only the chosen tab's panels show */
+    body[data-tab="home"] main > .panel:not([data-tab="home"]),
+    body[data-tab="markets"] main > .panel:not([data-tab="markets"]),
+    body[data-tab="cimp"] main > .panel:not([data-tab="cimp"]),
+    body[data-tab="bot"] main > .panel:not([data-tab="bot"]),
+    body[data-tab="ai"] main > .panel:not([data-tab="ai"]) { display: none; }
+
+    /* floating tab bar */
+    .tabbar { display: flex; position: fixed; z-index: 30; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+              height: 76px; padding: 6px; border-radius: 38px;
+              background: linear-gradient(135deg, rgba(86,94,232,.93), rgba(142,122,246,.93));
+              -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+              box-shadow: 0 12px 32px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.3); }
+    .tabbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+                     padding: 0; border: 0; border-radius: 32px; background: transparent; color: #fff; font-size: 11px; font-weight: 500; }
+    .tabbar button:hover { background: rgba(255,255,255,.08); }
+    .tabbar svg { width: 26px; height: 26px; }
+    .tabbar button.on { color: #6dff97; font-weight: 600; background: rgba(14,16,40,.45); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+    table.book td { text-align: right; }
+    table.book tr.ask td:first-child, table.book tr.bid td:first-child { text-align: left; padding-left: 10px; }
+  }
   @media (prefers-reduced-motion: reduce) { .feed .track { animation: none; } }
 </style>
 </head>
@@ -169,12 +259,12 @@
   <div class="logo">CIMP</div>
   <div class="brand">x-Cimphawng // TOKEN BOT<small>CIMP · 1M UP/DOWN · SIMULATED BOOK</small></div>
   <div class="hdr-stats">
-    <div>CIMP/USD<b id="h-spot">–</b></div>
-    <div>UP<b id="h-up">–</b></div>
-    <div>DOWN<b id="h-dn">–</b></div>
-    <div>SUM<b id="h-sum">–</b></div>
-    <div>ETH<b id="h-eth">–</b></div>
-    <div>MY WALLET<b id="h-me">–</b></div>
+    <div class="chip hs-spot" data-go="cimp"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5" stroke-linecap="round"/></svg><span class="lbl">CIMP/USD</span><b id="h-spot">–</b></div>
+    <div class="hs-up"><span class="lbl">UP</span><b id="h-up">–</b></div>
+    <div class="hs-dn"><span class="lbl">DOWN</span><b id="h-dn">–</b></div>
+    <div class="hs-sum"><span class="lbl">SUM</span><b id="h-sum">–</b></div>
+    <div class="chip hs-eth" data-go="markets"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l7 10-7 4-7-4 7-10z"/><path d="M5 13.5l7 8.5 7-8.5-7 4-7-4z"/></svg><span class="lbl">ETH</span><b id="h-eth">–</b></div>
+    <div class="chip hs-me" data-go="home"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M16 13h2M3 10h18M7 6V4h10v2"/></svg><span class="lbl">MY WALLET</span><b id="h-me">–</b></div>
     <div id="h-clock" class="muted">–</div>
     <button id="speed" title="Simulation speed">1×</button>
     <button id="lang" class="c" title="Language / Pau">English</button>
@@ -184,7 +274,7 @@
 <div class="news" id="news" hidden><span class="ntag"><b id="news-tag">NEWS</b></span><span id="news-text"></span><span class="nmove" id="news-move"></span></div>
 
 <main class="grid">
-  <section class="panel" id="me">
+  <section class="panel" id="me" data-tab="home">
     <h2>My wallet <span>pretend $100 · play money only</span><em class="live" id="me-tag">BOT OFF</em></h2>
     <div class="me">
       <div>
@@ -227,7 +317,7 @@
     </div>
   </section>
 
-  <section class="panel" id="dex">
+  <section class="panel" id="dex" data-tab="markets">
     <h2>Base DEX <span>live prices · real data, read-only</span><em class="live" id="dex-status">…</em></h2>
     <div class="dex">
       <div class="dex-cards" id="dex-cards"></div>
@@ -244,7 +334,7 @@
     <div class="muted dex-note">Real market data from Base DEX pools via GeckoTerminal. Prices can lag a few seconds. Nothing here trades.</div>
   </section>
 
-  <section class="panel" id="wallet">
+  <section class="panel" id="wallet" data-tab="bot">
     <h2>Bot wallet <span>0xC1M…7537 · x-Cimphawng</span><em class="live">SIM</em></h2>
     <div class="muted">ALL-TIME PNL</div>
     <div class="pnl" id="w-pnl">+$0.000</div>
@@ -264,7 +354,7 @@
     <canvas id="c-rounds" style="height:44px"></canvas>
   </section>
 
-  <section class="panel" id="matrix">
+  <section class="panel" id="matrix" data-tab="bot">
     <h2>Transport matrix <span>up lots · down lots into complete sets</span></h2>
     <div class="split">
       <canvas id="c-matrix" style="height:120px"></canvas>
@@ -277,13 +367,13 @@
     </div>
   </section>
 
-  <section class="panel" id="spot">
+  <section class="panel" id="spot" data-tab="cimp">
     <h2>CIMP spot <span>1s candles</span></h2>
     <canvas id="c-spot" style="height:230px"></canvas>
     <table class="book" id="book"></table>
   </section>
 
-  <section class="panel" id="arcs">
+  <section class="panel" id="arcs" data-tab="bot">
     <h2>FIFO arc lace <span>every set stitched from two legs</span></h2>
     <div class="split">
       <canvas id="c-arcs" style="height:120px"></canvas>
@@ -296,22 +386,22 @@
     </div>
   </section>
 
-  <section class="panel" id="neural">
+  <section class="panel" id="neural" data-tab="ai">
     <h2>Neural shell <span>model inputs → signal → order router → execution</span></h2>
     <canvas id="c-neural" style="height:440px"></canvas>
   </section>
 
-  <section class="panel" id="funnel">
+  <section class="panel" id="funnel" data-tab="cimp">
     <h2>Resolution funnel <span>vol cone to settlement</span></h2>
     <canvas id="c-funnel" style="height:190px"></canvas>
   </section>
 
-  <section class="panel" id="vwap">
+  <section class="panel" id="vwap" data-tab="bot">
     <h2>Running combined VWAP <span>cost of each completed set vs $1.00 payout</span></h2>
     <canvas id="c-vwap" style="height:190px"></canvas>
   </section>
 
-  <section class="panel" id="tiles">
+  <section class="panel" id="tiles" data-tab="cimp">
     <div class="tiles">
       <div class="tile"><span>T to settlement</span><b id="t-left">–</b></div>
       <div class="tile"><span>Round</span><b id="t-round">–</b></div>
@@ -322,7 +412,15 @@
     </div>
   </section>
 </main>
-<footer>Cimphawng Terminal — a hobby toy. Every number here comes from a random-walk simulation running in your browser. No real market, wallet or money is involved. Not financial advice.</footer>
+<footer>Cimphawng Terminal — a hobby toy. The CIMP market and bot are a simulation running in your browser. Base DEX prices are real public data, read-only. No wallet or real money is involved. Not financial advice.</footer>
+<nav class="tabbar" id="tabbar" aria-label="Sections">
+  <button data-go="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+  <button data-go="markets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Markets</span></button>
+  <button data-go="cimp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5"/></svg><span>CIMP</span></button>
+  <button data-go="bot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6"/></svg><span>Bot</span></button>
+  <button data-go="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg><span>AI</span></button>
+</nav>
+
 
 <script>
 (() => {
@@ -487,8 +585,11 @@
     'Opposite leg': 'Leg dang',
     'Set builder': 'Set bawlna',
     'Settlement': 'Kual beina',
-    'Cimphawng Terminal — a hobby toy. Every number here comes from a random-walk simulation running in your browser. No real market, wallet or money is involved. Not financial advice.':
-      'Cimphawng Terminal — kimawlna bek ahi hi. Hih mun a nambat khempeuh na browser sungah kibawl simulation ahi hi. Market taktak, sum-ip taktak le sum taktak kihel lo hi. Sum kizat dan thuhilhna hi lo hi.',
+    'Cimphawng Terminal — a hobby toy. The CIMP market and bot are a simulation running in your browser. Base DEX prices are real public data, read-only. No wallet or real money is involved. Not financial advice.':
+      'Cimphawng Terminal — kimawlna bek ahi hi. CIMP market le bot na browser sungah kibawl simulation ahi hi. Base DEX a man te data taktak ahi a, en theih bek hi. Sum-ip le sum taktak kihel lo hi. Sum kizat dan thuhilhna hi lo hi.',
+    // phone tab bar
+    'Home': 'Inn',
+    'Markets': 'Market',
   };
   let LANG = 'zo';
   try { LANG = localStorage.getItem('cimphawng-lang') || 'zo'; } catch (e) { /* default Zomi */ }
@@ -730,6 +831,7 @@
   }
 
   function drawMe() {
+    if (!shown('c-me')) return;
     const [ctx, w, h] = fit($('c-me'));
     hgrid(ctx, w, h, 3);
     const c = W.curve;
@@ -933,6 +1035,7 @@
   }
 
   function drawDex() {
+    if (!shown('c-dex')) return;
     const [ctx, w, h] = fit($('c-dex'));
     const cs = D.candles, pad = 62, volH = h * 0.18, top = 8, bot = h - 16;
     if (!cs.length) {
@@ -1004,6 +1107,18 @@
     $('dex-trades').innerHTML = `<tr><th>${tr('Side')}</th><th>${tr('Price')}</th><th>${esc(m.sym)}</th><th>USD</th><th>${tr('Time')}</th></tr>`
       + (rows || `<tr><td colspan="5" class="muted">${D.status === 'live' ? tr('No trades yet') : '…'}</td></tr>`);
     drawDex();
+  }
+
+  // ---------- phone tabs ----------
+  const TABS = ['home', 'markets', 'cimp', 'bot', 'ai'];
+  const shown = id => $(id).offsetParent !== null;  // skip drawing charts on hidden tabs
+  function setTab(t, scroll) {
+    if (!TABS.includes(t)) t = 'home';
+    document.body.dataset.tab = t;
+    document.querySelectorAll('.tabbar [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === t));
+    try { localStorage.setItem('cimphawng-tab', t); } catch (e) { /* ignore */ }
+    if (scroll && getComputedStyle($('tabbar')).display !== 'none') scrollTo(0, 0);
+    drawMe(); drawDex();
   }
 
   // ---------- derived metrics ----------
@@ -1461,6 +1576,10 @@
   $('dex-tfs').addEventListener('click', e => { const b = e.target.closest('[data-tf]'); if (b) dexSelect(undefined, b.dataset.tf); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) dexTick(); });
   addEventListener('resize', () => drawDex());
+  let savedTab = 'home';
+  try { savedTab = localStorage.getItem('cimphawng-tab') || 'home'; } catch (e) { /* default */ }
+  setTab(savedTab);
+  document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) setTab(b.dataset.go, true); });
   renderDex();
   dexTick();
   setInterval(dexTick, 2000);
@@ -1481,10 +1600,15 @@
     acc += dt * speed;
     while (acc >= DT) { tick(); acc -= DT; }
     const M = metrics();
-    drawNeural(M, now);
+    if (shown('c-neural')) drawNeural(M, now);
     if (now - lastSlow > 120) {
       lastSlow = now;
-      drawEquity(); drawRounds(); drawMatrix(); drawArcs(); drawSpot(); drawFunnel(M); drawVwap();
+      if (shown('c-equity')) { drawEquity(); drawRounds(); }
+      if (shown('c-matrix')) drawMatrix();
+      if (shown('c-arcs')) drawArcs();
+      if (shown('c-spot')) drawSpot();
+      if (shown('c-funnel')) drawFunnel(M);
+      if (shown('c-vwap')) drawVwap();
     }
     if (now - lastText > 250) { lastText = now; renderText(M); renderBook(); renderFeed(); renderMe(); }
     if (now - lastCurve > 1000) {

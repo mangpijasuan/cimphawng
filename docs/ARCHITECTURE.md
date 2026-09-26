@@ -73,6 +73,7 @@ The script is one self-contained function, split into these sections (search for
 | Base DEX live data | Finds the top USDC pool for ETH and cbBTC on Base, then polls GeckoTerminal for pool stats (30s), candles (60s) and trades (30s), falling back to DexScreener for prices. Pauses while hidden, backs off on errors (15s up to 5 min). About 5 requests a minute |
 | derived metrics | Volatility, momentum, book imbalance, tilt and round mark-to-market, recomputed for each frame |
 | canvas helpers and panels | One draw function per panel (equity, matrix, arcs, spot, funnel, VWAP, neural shell, wallet chart) |
+| phone tabs | Below 760px wide, panels are grouped into five tabs (`data-tab` on each panel) with a floating tab bar. Charts on hidden tabs are skipped |
 | main loop | Fixed-step simulation, redraws throttled (see below), a warm-up of about 40 rounds at start |
 
 ### 2.2 Timing
@@ -92,6 +93,7 @@ The script is one self-contained function, split into these sections (search for
 | `cimphawng-wallet-v1` | Cash, CIMP amount and cost, bot copy on/off, bot P/L, last 20 actions. Open bot positions are refunded at cost when saved |
 | `cimphawng-lang` | `zo` or `en` |
 | `cimphawng-base-pools-v1` | The discovered Base pool addresses, cached for 24 hours |
+| `cimphawng-tab` | The last phone tab opened (`home`, `markets`, `cimp`, `bot`, `ai`) |
 
 Both are wrapped in `try/catch`, so the page still works where storage is blocked.
 
