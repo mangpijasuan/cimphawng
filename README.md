@@ -14,13 +14,25 @@ as profit whatever the outcome. That's the game the bot plays:
 
 | Panel | What it is |
 |---|---|
-| Wallet | All-time PnL, trade stats, win rate, equity curve, per-round results |
+| My wallet | **Your** pretend $100: buy/sell CIM (Cimphawng Token) at the live price, or let the bot trade for you |
+| Bot wallet | All-time PnL, trade stats, win rate, equity curve, per-round results |
 | Transport matrix | UP/DOWN shares bought across the current round, in 5-second buckets |
 | FIFO arc lace | Each completed set drawn as an arc linking its UP leg to its DOWN leg |
 | CIM spot | 1-second candles, the round's opening price, and a simulated order book |
 | Neural shell | Model inputs → rotating particle "brain" → order-router outputs (eye candy driven by live values) |
 | Resolution funnel | Price path this round plus the ±1σ/±2σ volatility cone to settlement |
 | Running combined VWAP | Cost of every recent set vs the $1.00 payout, with the running average |
+
+## My wallet ($100 pretend mode)
+
+- You start with **$100 of play money** and 0 CIM.
+- **Buy $10 / $25 / all** and **Sell 25% / 50% / all** trade CIM at the current simulated price
+  (you pay a tiny spread, like a real exchange).
+- **Let bot trade my cash** copies 10% of every bot trade using your cash. That money is locked
+  until the 1-minute round settles, then comes back with the win or loss.
+- Your wallet is saved in your browser (localStorage), so it's still there when you come back.
+  If you reload mid-round, open bot trades are refunded at cost.
+- **Reset to $100** starts over.
 
 The `1×` button in the header cycles the simulation speed through 1×, 4× and 16×.
 

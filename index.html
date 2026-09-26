@@ -67,7 +67,22 @@
 
   #wallet { grid-row: span 2; }
   #spot { grid-row: span 2; }
-  #neural, #tiles { grid-column: 1 / -1; }
+  #neural, #tiles, #me { grid-column: 1 / -1; }
+
+  #me { border-color: #1f4a2e; box-shadow: inset 0 0 40px rgba(57,255,136,.04); }
+  .me { display: grid; grid-template-columns: 1.1fr 1fr 1.3fr; gap: 14px; }
+  .me-total { font-size: 30px; font-weight: 800; color: #fff; margin: 2px 0; }
+  .me-total small { font-size: 13px; margin-left: 8px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+  button.g { color: var(--green); border-color: var(--green); }
+  button.r { color: var(--red); border-color: var(--red); }
+  button.c { color: var(--cyan); border-color: var(--cyan); }
+  button.c.on { background: var(--cyan); color: #011; }
+  button.dim { color: var(--dim); border-color: var(--dim); }
+  .up { color: var(--green) !important; } .down { color: var(--red) !important; }
+  .hist { list-style: none; margin: 6px 0 0; padding: 0; font-size: 10px; color: var(--dim); }
+  .hist li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist li b { color: var(--text); font-weight: 400; }
   #vwap { grid-column: span 2; }
 
   .muted { color: var(--dim); }
@@ -106,6 +121,7 @@
   footer { padding: 6px 12px 16px; color: var(--dim); font-size: 10px; }
 
   @media (max-width: 900px) {
+    .me { grid-template-columns: 1fr; }
     .grid { grid-template-columns: 1fr; }
     #wallet, #spot { grid-row: auto; }
     #vwap { grid-column: auto; }
@@ -125,6 +141,7 @@
     <div>UP<b id="h-up">–</b></div>
     <div>DOWN<b id="h-dn">–</b></div>
     <div>SUM<b id="h-sum">–</b></div>
+    <div>MY WALLET<b id="h-me">–</b></div>
     <div id="h-clock" class="muted">–</div>
     <button id="speed" title="Simulation speed">1×</button>
   </div>
@@ -132,8 +149,51 @@
 <div class="feed"><div class="tag">● LIVE FEED</div><div class="track" id="feed">booting simulation…</div></div>
 
 <main class="grid">
+  <section class="panel" id="me">
+    <h2>My wallet <span>pretend $100 · play money only</span><em class="live" id="me-tag">BOT OFF</em></h2>
+    <div class="me">
+      <div>
+        <div class="muted">TOTAL VALUE</div>
+        <div class="me-total"><span id="me-total">$100.00</span><small id="me-pl">+$0.00</small></div>
+        <div class="kv">
+          <div><span>Cash</span><b id="me-cash">$100.00</b></div>
+          <div><span>CIM tokens</span><b id="me-cim">0</b></div>
+          <div><span>CIM value</span><b id="me-cimv">$0.00</b></div>
+          <div><span>Avg CIM cost</span><b id="me-avg">–</b></div>
+          <div><span>CIM P/L</span><b id="me-cimpl">–</b></div>
+          <div><span>Bot P/L</span><b id="me-botpl">$0.00</b></div>
+        </div>
+      </div>
+      <div>
+        <div class="muted">BUY CIM WITH PRETEND CASH</div>
+        <div class="btns">
+          <button class="g" data-buy="10">Buy $10</button>
+          <button class="g" data-buy="25">Buy $25</button>
+          <button class="g" data-buy="all">Buy all</button>
+        </div>
+        <div class="muted">SELL CIM</div>
+        <div class="btns">
+          <button class="r" data-sell="0.25">Sell 25%</button>
+          <button class="r" data-sell="0.5">Sell 50%</button>
+          <button class="r" data-sell="1">Sell all</button>
+        </div>
+        <div class="muted">COPY THE BOT</div>
+        <div class="btns">
+          <button class="c" id="me-bot">Let bot trade my cash</button>
+          <button class="dim" id="me-reset">Reset to $100</button>
+        </div>
+        <div class="muted" id="me-note">When on, you copy 10% of every bot trade using your cash. That money is locked until the round settles.</div>
+      </div>
+      <div>
+        <div class="muted">TOTAL VALUE OVER TIME</div>
+        <canvas id="c-me" style="height:96px"></canvas>
+        <ul class="hist" id="me-hist"></ul>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" id="wallet">
-    <h2>Wallet <span>0xC1M…7537 · x-Cimphawng</span><em class="live">SIM</em></h2>
+    <h2>Bot wallet <span>0xC1M…7537 · x-Cimphawng</span><em class="live">SIM</em></h2>
     <div class="muted">ALL-TIME PNL</div>
     <div class="pnl" id="w-pnl">+$0.000</div>
     <div class="muted" id="w-sub">–</div>
@@ -281,6 +341,7 @@
     S.tradeSizes.push(px * qty);
     if (S.tradeSizes.length > 800) S.tradeSizes.shift();
     S.lastLeg = side;
+    if (W.live && W.botOn) wCopy(side, px, qty);
     // FIFO: stitch UP legs to DOWN legs into complete sets
     while (r.upQ.length && r.dnQ.length) {
       const a = r.upQ[0], b = r.dnQ[0], m = Math.min(a.qty, b.qty);
@@ -331,6 +392,7 @@
     S.rounds++;
     if (pnl > 0) S.wins++;
     log(`SETTLED #${r.n} ${upWins ? 'UP' : 'DOWN'} · ${r.sets.length} sets · ${money(pnl)}`);
+    wSettle(upWins);
   }
 
   function tick() {
@@ -364,6 +426,116 @@
 
     botStep(tLeft);
     if (tLeft <= 0) { settle(); newRound(); }
+  }
+
+  // ---------- my pretend wallet ----------
+  const START_CASH = 100, COPY = 0.1, WKEY = 'cimphawng-wallet-v1', CIM_HALF_SPREAD = 0.0005;
+  const W = { cash: START_CASH, cim: 0, cimCost: 0, botOn: false, botPnl: 0, hist: [], curve: [],
+              live: false, pos: { up: 0, dn: 0, cost: 0 } };
+
+  function wLoad() {
+    try {
+      const d = JSON.parse(localStorage.getItem(WKEY) || 'null');
+      if (d && typeof d.cash === 'number') {
+        Object.assign(W, { cash: d.cash, cim: d.cim || 0, cimCost: d.cimCost || 0, botOn: !!d.botOn,
+                           botPnl: d.botPnl || 0, hist: Array.isArray(d.hist) ? d.hist : [] });
+      }
+    } catch (e) { /* storage unavailable: start fresh */ }
+  }
+  function wSave() {
+    // open bot positions are refunded at cost, since the round can't be resumed after a reload
+    try {
+      localStorage.setItem(WKEY, JSON.stringify({ cash: W.cash + W.pos.cost, cim: W.cim, cimCost: W.cimCost,
+        botOn: W.botOn, botPnl: W.botPnl, hist: W.hist.slice(0, 20) }));
+    } catch (e) { /* ignore */ }
+  }
+  function wNote(msg) {
+    W.hist.unshift({ t: new Date().toTimeString().slice(0, 8), msg });
+    if (W.hist.length > 20) W.hist.pop();
+    log('YOU: ' + msg);
+  }
+  function wTotal() {
+    return W.cash + W.cim * S.spot + S.fair * W.pos.up + (1 - S.fair) * W.pos.dn;
+  }
+  function wBuyCim(amt) {
+    amt = Math.min(amt === 'all' ? W.cash : +amt, W.cash);
+    if (amt < 0.01) { wNote('Not enough cash to buy CIM'); return; }
+    const px = S.spot + CIM_HALF_SPREAD, qty = amt / px;
+    W.cash -= amt; W.cim += qty; W.cimCost += amt;
+    wNote(`Bought ${qty.toFixed(2)} CIM @ $${px.toFixed(4)} for $${amt.toFixed(2)}`);
+    wSave();
+  }
+  function wSellCim(frac) {
+    if (W.cim <= 0) { wNote('No CIM to sell'); return; }
+    const qty = frac >= 1 ? W.cim : W.cim * frac, px = S.spot - CIM_HALF_SPREAD;
+    const got = qty * px, costPart = frac >= 1 ? W.cimCost : W.cimCost * frac;
+    W.cash += got; W.cim -= qty; W.cimCost -= costPart;
+    if (frac >= 1) { W.cim = 0; W.cimCost = 0; }
+    wNote(`Sold ${qty.toFixed(2)} CIM @ $${px.toFixed(4)} for $${got.toFixed(2)} (${money(got - costPart)})`);
+    wSave();
+  }
+  function wCopy(side, px, qty) {
+    const q = Math.round(qty * COPY * 100) / 100, cost = q * px;
+    if (q <= 0 || cost > W.cash) return;
+    W.cash -= cost; W.pos.cost += cost;
+    if (side === 'UP') W.pos.up += q; else W.pos.dn += q;
+  }
+  function wSettle(upWins) {
+    const p = W.pos;
+    if (!p.cost) return;
+    const pay = upWins ? p.up : p.dn, pnl = pay - p.cost;
+    W.cash += pay; W.botPnl += pnl;
+    W.pos = { up: 0, dn: 0, cost: 0 };
+    wNote(`Bot round settled ${upWins ? 'UP' : 'DOWN'}: ${money(pnl)} on $${p.cost.toFixed(2)} staked`);
+    wSave();
+  }
+  function wReset() {
+    if (!confirm('Reset your pretend wallet back to $100 cash and 0 CIM?')) return;
+    Object.assign(W, { cash: START_CASH, cim: 0, cimCost: 0, botPnl: 0, hist: [], curve: [],
+                       pos: { up: 0, dn: 0, cost: 0 } });
+    wNote('Wallet reset to $100.00');
+    wSave();
+  }
+
+  function drawMe() {
+    const [ctx, w, h] = fit($('c-me'));
+    hgrid(ctx, w, h, 3);
+    const c = W.curve;
+    if (c.length < 2) return;
+    const lo = Math.min(START_CASH, ...c), hi = Math.max(START_CASH, ...c);
+    const pad = Math.max((hi - lo) * 0.1, 0.5);
+    const X = i => i / (c.length - 1) * (w - 40), Y = v => 4 + (hi + pad - v) / (hi - lo + 2 * pad) * (h - 8);
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = COL.dim; ctx.beginPath();
+    ctx.moveTo(0, Y(START_CASH)); ctx.lineTo(w - 40, Y(START_CASH)); ctx.stroke(); ctx.setLineDash([]);
+    const last = c[c.length - 1];
+    if (Math.abs(Y(last) - Y(START_CASH)) > 10) { ctx.fillStyle = COL.dim; ctx.fillText('$100', w - 34, Y(START_CASH) + 3); }
+    ctx.beginPath();
+    c.forEach((v, i) => i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v)));
+    ctx.strokeStyle = last >= START_CASH ? COL.green : COL.red; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = ctx.strokeStyle; ctx.fillText('$' + last.toFixed(2), w - 38, clamp(Y(last) + 3, 10, h - 2));
+  }
+
+  function renderMe() {
+    const total = wTotal(), pl = total - START_CASH, cimV = W.cim * S.spot, cimPl = cimV - W.cimCost;
+    const sign = (el, v) => { el.classList.toggle('up', v > 0.004); el.classList.toggle('down', v < -0.004); };
+    $('me-total').textContent = '$' + total.toFixed(2);
+    $('me-pl').textContent = money(pl) + ' (' + (pl / START_CASH * 100).toFixed(1) + '%)';
+    sign($('me-pl'), pl);
+    $('h-me').textContent = '$' + total.toFixed(2);
+    sign($('h-me'), pl);
+    $('me-cash').textContent = '$' + W.cash.toFixed(2) + (W.pos.cost ? ` (+$${W.pos.cost.toFixed(2)} in bot)` : '');
+    $('me-cim').textContent = W.cim.toFixed(2);
+    $('me-cimv').textContent = '$' + cimV.toFixed(2);
+    $('me-avg').textContent = W.cim > 0 ? '$' + (W.cimCost / W.cim).toFixed(4) : '–';
+    $('me-cimpl').textContent = W.cim > 0 ? money(cimPl) : '–';
+    sign($('me-cimpl'), W.cim > 0 ? cimPl : 0);
+    $('me-botpl').textContent = money(W.botPnl);
+    sign($('me-botpl'), W.botPnl);
+    $('me-bot').classList.toggle('on', W.botOn);
+    $('me-bot').textContent = W.botOn ? 'Bot is trading ✓ (tap to stop)' : 'Let bot trade my cash';
+    $('me-tag').textContent = W.botOn ? 'BOT ON' : 'BOT OFF';
+    $('me-hist').innerHTML = W.hist.slice(0, 5)
+      .map(h => `<li>${h.t} · <b>${h.msg.replace(/[<>&]/g, '')}</b></li>`).join('') || '<li>No trades yet: try Buy $10.</li>';
   }
 
   // ---------- derived metrics ----------
@@ -779,7 +951,20 @@
   // warm up: pre-run history so the dashboard opens with data
   for (let i = 0; i < (40 * ROUND + 34) / DT; i++) tick(); // land mid-round
 
-  let speed = 1, acc = 0, prev = performance.now(), lastSlow = 0, lastText = 0;
+  wLoad();
+  W.live = true;
+  W.curve.push(wTotal());
+  document.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => { wBuyCim(b.dataset.buy); renderMe(); }));
+  document.querySelectorAll('[data-sell]').forEach(b => b.addEventListener('click', () => { wSellCim(+b.dataset.sell); renderMe(); }));
+  $('me-bot').addEventListener('click', () => {
+    W.botOn = !W.botOn;
+    wNote(W.botOn ? 'Bot copy-trading ON (10% of each bot trade)' : 'Bot copy-trading OFF (open trades still settle)');
+    wSave(); renderMe();
+  });
+  $('me-reset').addEventListener('click', () => { wReset(); renderMe(); });
+  addEventListener('pagehide', wSave);
+
+  let speed = 1, acc = 0, prev = performance.now(), lastSlow = 0, lastText = 0, lastCurve = 0;
   $('speed').addEventListener('click', () => {
     speed = speed === 1 ? 4 : speed === 4 ? 16 : 1;
     $('speed').textContent = speed + '×';
@@ -795,7 +980,13 @@
       lastSlow = now;
       drawEquity(); drawRounds(); drawMatrix(); drawArcs(); drawSpot(); drawFunnel(M); drawVwap();
     }
-    if (now - lastText > 250) { lastText = now; renderText(M); renderBook(); renderFeed(); }
+    if (now - lastText > 250) { lastText = now; renderText(M); renderBook(); renderFeed(); renderMe(); }
+    if (now - lastCurve > 1000) {
+      lastCurve = now;
+      W.curve.push(wTotal());
+      if (W.curve.length > 600) W.curve.shift();
+      drawMe();
+    }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
