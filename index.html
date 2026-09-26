@@ -49,6 +49,16 @@
   .feed { display: flex; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
   .feed .tag { background: var(--red); color: #fff; padding: 3px 8px; font-weight: 600; flex: none; z-index: 1; }
   .feed .track { padding: 3px 0; color: var(--yellow); animation: marquee 60s linear infinite; }
+  .news { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 7px 12px;
+          border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+  .news[hidden] { display: none; }
+  .news.good { background: rgba(57,255,136,.12); color: var(--green); }
+  .news.bad { background: rgba(255,59,92,.14); color: var(--red); }
+  .news.fresh { animation: newsflash .5s ease-in-out 4 alternate; }
+  .news .ntag { background: currentColor; padding: 1px 7px; font-size: 10px; }
+  .news .ntag b { color: #021; font-weight: 800; }
+  .news .nmove { margin-left: auto; font-size: 11px; font-weight: 400; opacity: .85; }
+  @keyframes newsflash { from { filter: brightness(1); } to { filter: brightness(1.8); } }
   @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
   .grid {
@@ -148,6 +158,7 @@
   </div>
 </header>
 <div class="feed"><div class="tag">● LIVE FEED</div><div class="track" id="feed">booting simulation…</div></div>
+<div class="news" id="news" hidden><span class="ntag"><b id="news-tag">NEWS</b></span><span id="news-text"></span><span class="nmove" id="news-move"></span></div>
 
 <main class="grid">
   <section class="panel" id="me">
@@ -319,6 +330,22 @@
     'MY WALLET': 'KA SUM-IP',
     '● LIVE FEED': '● TU-A THU',
     'YOU': 'NANG',
+    // news events
+    'NEWS': 'THU THAK',
+    'Big move': 'Kikhelna lian',
+    'Small move': 'Kikhelna neu',
+    'moving now…': 'tu-in a kikhel lai…',
+    'move done': 'kikhelna bei',
+    'Cimphawng listed on a new exchange': 'Cimphawng exchange thak ah kigelh',
+    'A big wallet just bought 1M CIM': 'Sum-ip lian khat in CIM 1M lei',
+    'Local shops start accepting CIM': 'Khua sung dawr te in CIM a san kipan',
+    'Cimphawng app passes 10,000 users': 'Cimphawng app zangmi 10,000 val',
+    'Developers ship a big CIM upgrade': 'Developer te in CIM upgrade lian khat suah',
+    'Rumor: a big holder is selling': 'Thu kigen: CIM tampi neimi khat in zuak ding',
+    'Exchange pauses CIM withdrawals': 'Exchange in CIM laksuahna khawlsak',
+    'Bug found in the CIM smart contract': 'CIM smart contract ah bug kimu',
+    'Market-wide sell-off hits crypto': 'Crypto market khempeuh ah zuakna tampi',
+    'A whale dumps 2M CIM': 'Sum-ip lian khat in CIM 2M zuak',
     // my wallet
     'My wallet': 'Ka sum-ip',
     'pretend $100 · play money only': '$100 kimawlna sum · sum taktak hi lo',
@@ -424,7 +451,8 @@
 
   // ---------- simulation state ----------
   const S = {
-    t: 0, spot: 0.4210, returns: [], candles: [], cur: null,
+    t: 0, spot: 0.4210, anchor: 0.42, returns: [], candles: [], cur: null,
+    news: [], nextNews: 30, shock: null,
     nUp: 0, nDn: 0, fair: 0.5, upAsk: 0.51, dnAsk: 0.51,
     book: { bids: Array.from({ length: 7 }, () => rand(200, 4000)), asks: Array.from({ length: 7 }, () => rand(200, 4000)) },
     pnl: 0, equity: [0], roundPnls: [], trades: 0, tradeSizes: [], rounds: 0, wins: 0, setsDone: 0,
@@ -508,10 +536,38 @@
     wSettle(upWins);
   }
 
+  // ---------- price news events ----------
+  const HEADLINES = {
+    good: ['Cimphawng listed on a new exchange', 'A big wallet just bought 1M CIM', 'Local shops start accepting CIM',
+           'Cimphawng app passes 10,000 users', 'Developers ship a big CIM upgrade'],
+    bad: ['Rumor: a big holder is selling', 'Exchange pauses CIM withdrawals', 'Bug found in the CIM smart contract',
+          'Market-wide sell-off hits crypto', 'A whale dumps 2M CIM'],
+  };
+  function fireNews() {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const list = HEADLINES[dir > 0 ? 'good' : 'bad'];
+    const size = rand(0.03, 0.12), secs = rand(6, 12);
+    // the move plays out over a few seconds, so there's time to react
+    S.shock = { left: Math.round(secs / DT), step: dir * size / Math.round(secs / DT) };
+    // part of the move sticks: the price the market drifts back to shifts too
+    S.anchor = 0.42 * Math.exp(clamp(Math.log(S.anchor / 0.42) + dir * size * 0.5, -0.3, 0.3));
+    const ev = { t: S.t, en: list[randInt(0, list.length - 1)], dir, big: size > 0.07 };
+    S.news.push(ev);
+    if (S.news.length > 20) S.news.shift();
+    if (S.cur) S.cur.news = dir;
+    log(`${tr('NEWS')} ${dir > 0 ? '▲' : '▼'} ${tr(ev.en)}`);
+    S.nextNews = S.t + rand(45, 120);
+  }
+
   function tick() {
-    // spot: random walk with mild mean reversion so it stays in a sane range
+    if (S.t >= S.nextNews) fireNews();
+    let shock = 0, volMul = 1;
+    if (S.shock && S.shock.left > 0) { shock = S.shock.step; S.shock.left--; volMul = 2.2; }
+    // the news anchor slowly relaxes back toward 0.42 (price stays roughly $0.26–$0.65)
+    S.anchor *= Math.exp(-0.0015 * Math.log(S.anchor / 0.42) * DT);
+    // spot: random walk pulled back toward the anchor, so news moves fade over a few minutes
     const z = gauss();
-    const ret = SIGMA * Math.sqrt(DT) * z - 0.0004 * Math.log(S.spot / 0.42) * DT;
+    const ret = SIGMA * volMul * Math.sqrt(DT) * z + shock - 0.003 * Math.log(S.spot / S.anchor) * DT;
     S.spot *= Math.exp(ret);
     S.t += DT;
     S.returns.push(ret);
@@ -796,6 +852,12 @@
       ctx.beginPath(); ctx.moveTo(x, Y(c.h)); ctx.lineTo(x, Y(c.l)); ctx.stroke();
       const y1 = Y(Math.max(c.o, c.c)), y2 = Y(Math.min(c.o, c.c));
       ctx.fillRect(x - bw * 0.35, y1, bw * 0.7, Math.max(1, y2 - y1));
+      if (c.news) {
+        const good = c.news > 0, fy = good ? Y(c.l) + 12 : Y(c.h) - 12;
+        ctx.fillStyle = good ? COL.green : COL.red;
+        ctx.beginPath(); ctx.arc(x, fy, 6, 0, 7); ctx.fill();
+        ctx.fillStyle = '#021'; ctx.textAlign = 'center'; ctx.fillText('N', x, fy + 3); ctx.textAlign = 'left';
+      }
     });
     const ly = Y(S.spot);
     ctx.fillStyle = COL.yellow; ctx.fillRect(w - pad, ly - 7, pad, 14);
@@ -1049,6 +1111,26 @@
     $('t-cone').textContent = '±' + (SIGMA * Math.sqrt(M.tLeft) * 1e4).toFixed(1) + 'bp';
     $('t-mark').textContent = money(M.mark);
     $('t-tilt').textContent = (M.tilt >= 0 ? '+' : '') + M.tilt + (M.tilt >= 0 ? ' UP' : ' DN');
+    renderNews();
+  }
+
+  let shownNews = null;
+  function renderNews() {
+    const ev = S.news[S.news.length - 1], box = $('news');
+    if (!ev || S.t - ev.t > 30) { box.hidden = true; return; }
+    box.hidden = false;
+    box.classList.toggle('good', ev.dir > 0);
+    box.classList.toggle('bad', ev.dir < 0);
+    if (shownNews !== ev) {  // flash only when a new headline arrives
+      shownNews = ev;
+      void box.offsetWidth;
+      box.classList.add('fresh');
+      setTimeout(() => box.classList.remove('fresh'), 2200);
+    }
+    $('news-tag').textContent = tr('NEWS');
+    $('news-text').textContent = (ev.dir > 0 ? '▲ ' : '▼ ') + tr(ev.en);
+    const moving = S.shock && S.shock.left > 0 && S.news[S.news.length - 1] === ev;
+    $('news-move').textContent = tr(ev.big ? 'Big move' : 'Small move') + ' · ' + tr(moving ? 'moving now…' : 'move done');
   }
 
   let lastFeed = '';

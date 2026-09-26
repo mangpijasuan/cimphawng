@@ -34,6 +34,14 @@ as profit whatever the outcome. That's the game the bot plays:
   If you reload mid-round, open bot trades are refunded at cost.
 - **Reset to $100** starts over.
 
+## Price news
+
+Every minute or two, a news headline pops up in a banner under the live feed. Good news (green ▲),
+like "Cimphawng listed on a new exchange", pushes CIM up. Bad news (red ▼), like "A whale dumps 2M CIM",
+pushes it down. The move plays out over 6–12 seconds, so you have a few seconds to buy or sell with your
+pretend wallet. It's a small (3–7%) or big (7–12%) move, and part of it fades over the next few minutes.
+News candles are marked with an **N** on the CIM price chart, and headlines also appear in the live feed.
+
 ## Zomi / English
 
 The page opens in **Zomi**. The **English** / **Zomi** button in the header switches language,
