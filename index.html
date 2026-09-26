@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cimphawng Terminal</title>
+<meta name="description" content="A simulated, sci-fi style trading bot dashboard for the fictional CIM token. Hobby project — no real trading.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #04070a;
+    --panel: #080e12;
+    --line: #16262b;
+    --dim: #4f6b71;
+    --text: #b9d3d6;
+    --green: #39ff88;
+    --red: #ff3b5c;
+    --yellow: #ffd23f;
+    --cyan: #3fd8ff;
+    --orange: #ff9f2e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 11px/1.35 "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing: .02em;
+    overflow-x: hidden;
+  }
+  body::after { /* scanlines */
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px);
+  }
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 6px 12px; border-bottom: 1px solid var(--line); background: #060b0e;
+  }
+  .logo { width: 26px; height: 18px; background: var(--cyan); color: #001; font-weight: 800;
+          display: grid; place-items: center; font-size: 10px; }
+  .brand { color: var(--cyan); font-weight: 600; }
+  .brand small { display: block; color: var(--dim); font-size: 9px; font-weight: 400; }
+  .hdr-stats { margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .hdr-stats b { color: #fff; font-weight: 600; margin-left: 4px; }
+  button {
+    font: inherit; color: var(--yellow); background: transparent; border: 1px solid var(--yellow);
+    padding: 2px 8px; cursor: pointer;
+  }
+  button:hover { background: rgba(255,210,63,.1); }
+  .feed { display: flex; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  .feed .tag { background: var(--red); color: #fff; padding: 3px 8px; font-weight: 600; flex: none; z-index: 1; }
+  .feed .track { padding: 3px 0; color: var(--yellow); animation: marquee 60s linear infinite; }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .grid {
+    display: grid; gap: 6px; padding: 6px;
+    grid-template-columns: 1.05fr 1.45fr 1fr;
+  }
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 8px; min-width: 0; position: relative; }
+  .panel h2 {
+    margin: 0 0 6px; font-size: 10px; font-weight: 600; color: #dfeff1; text-transform: uppercase;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .panel h2::before { content: "◆"; color: var(--cyan); font-size: 8px; }
+  .panel h2 span { color: var(--dim); font-weight: 400; }
+  .live { margin-left: auto; color: var(--cyan); border: 1px solid var(--cyan); padding: 0 5px; font-size: 9px; }
+  canvas { display: block; width: 100%; }
+
+  #wallet { grid-row: span 2; }
+  #spot { grid-row: span 2; }
+  #neural, #tiles { grid-column: 1 / -1; }
+  #vwap { grid-column: span 2; }
+
+  .muted { color: var(--dim); }
+  .pnl { font-size: 34px; font-weight: 800; color: var(--green); margin: 4px 0 2px; text-shadow: 0 0 18px rgba(57,255,136,.35); }
+  .pnl.neg { color: var(--red); text-shadow: 0 0 18px rgba(255,59,92,.35); }
+  .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; }
+  .kv div span { display: block; color: var(--dim); font-size: 9px; text-transform: uppercase; }
+  .kv div b { color: #fff; font-size: 14px; font-weight: 600; }
+  .risk { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .riskbar { flex: 1; height: 6px; background: #13201f; }
+  .riskbar i { display: block; height: 100%; background: var(--yellow); width: 0; transition: width .3s; }
+
+  .split { display: grid; grid-template-columns: 1fr 104px; gap: 8px; }
+  .side { border-left: 1px solid var(--line); padding-left: 8px; display: flex; flex-direction: column; gap: 5px; }
+  .side span { display: block; color: var(--dim); font-size: 9px; text-transform: uppercase; }
+  .side b { color: #fff; font-weight: 600; }
+  .side b.y { color: var(--yellow); } .side b.g { color: var(--green); } .side b.r { color: var(--red); }
+
+  table.book { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 10px; }
+  table.book td { padding: 1px 4px; text-align: right; }
+  table.book tr.ask td:first-child { color: var(--red); }
+  table.book tr.bid td:first-child { color: var(--green); }
+  table.book tr.mid td { color: var(--yellow); text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  table.book td.bar { position: relative; }
+  table.book td.bar i { position: absolute; right: 0; top: 1px; bottom: 1px; opacity: .22; }
+  table.book tr.ask td.bar i { background: var(--red); }
+  table.book tr.bid td.bar i { background: var(--green); }
+
+  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .tile { border: 1px solid var(--line); padding: 6px 8px; }
+  .tile span { display: block; color: var(--dim); font-size: 9px; text-transform: uppercase; }
+  .tile b { font-size: 16px; color: var(--cyan); font-weight: 600; }
+  .tile.hot { border-color: var(--red); } .tile.hot b { color: var(--red); }
+  .tile.good b { color: var(--green); }
+
+  footer { padding: 6px 12px 16px; color: var(--dim); font-size: 10px; }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+    #wallet, #spot { grid-row: auto; }
+    #vwap { grid-column: auto; }
+    .tiles { grid-template-columns: repeat(3, 1fr); }
+    .hdr-stats { margin-left: 0; gap: 10px; }
+    .pnl { font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .feed .track { animation: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">CIM</div>
+  <div class="brand">x-Cimphawng // TOKEN BOT<small>CIM · 1M UP/DOWN · SIMULATED BOOK</small></div>
+  <div class="hdr-stats">
+    <div>CIM/USD<b id="h-spot">–</b></div>
+    <div>UP<b id="h-up">–</b></div>
+    <div>DOWN<b id="h-dn">–</b></div>
+    <div>SUM<b id="h-sum">–</b></div>
+    <div id="h-clock" class="muted">–</div>
+    <button id="speed" title="Simulation speed">1×</button>
+  </div>
+</header>
+<div class="feed"><div class="tag">● LIVE FEED</div><div class="track" id="feed">booting simulation…</div></div>
+
+<main class="grid">
+  <section class="panel" id="wallet">
+    <h2>Wallet <span>0xC1M…7537 · x-Cimphawng</span><em class="live">SIM</em></h2>
+    <div class="muted">ALL-TIME PNL</div>
+    <div class="pnl" id="w-pnl">+$0.000</div>
+    <div class="muted" id="w-sub">–</div>
+    <div class="kv">
+      <div><span>Trades</span><b id="w-trades">0</b></div>
+      <div><span>Win rate</span><b id="w-win">–</b></div>
+      <div><span>Set VWAP</span><b id="w-svwap">–</b></div>
+      <div><span>Rounds</span><b id="w-rounds">0</b></div>
+      <div><span>Sets done</span><b id="w-sets">0</b></div>
+      <div><span>Best round</span><b id="w-best">–</b></div>
+    </div>
+    <div class="risk"><span class="muted">DIRECTIONAL RISK</span><div class="riskbar"><i id="w-riskbar"></i></div><b id="w-risk">0/10</b></div>
+    <div class="muted">EQUITY CURVE · PNL PER SETTLED ROUND</div>
+    <canvas id="c-equity" style="height:150px"></canvas>
+    <div class="muted" style="margin-top:8px">ROUND RESULTS</div>
+    <canvas id="c-rounds" style="height:44px"></canvas>
+  </section>
+
+  <section class="panel" id="matrix">
+    <h2>Transport matrix <span>up lots · down lots into complete sets</span></h2>
+    <div class="split">
+      <canvas id="c-matrix" style="height:120px"></canvas>
+      <div class="side">
+        <div><span>Sets in round</span><b id="m-sets">0</b></div>
+        <div><span>Pair matched</span><b id="m-match" class="g">–</b></div>
+        <div><span>Avg set cost</span><b id="m-cost" class="y">–</b></div>
+        <div><span>Tilt</span><b id="m-tilt">–</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="spot">
+    <h2>CIM spot <span>1s candles</span></h2>
+    <canvas id="c-spot" style="height:230px"></canvas>
+    <table class="book" id="book"></table>
+  </section>
+
+  <section class="panel" id="arcs">
+    <h2>FIFO arc lace <span>every set stitched from two legs</span></h2>
+    <div class="split">
+      <canvas id="c-arcs" style="height:120px"></canvas>
+      <div class="side">
+        <div><span>Legs this round</span><b id="a-legs">0</b></div>
+        <div><span>Open UP / DN</span><b id="a-open">0 / 0</b></div>
+        <div><span>Best set</span><b id="a-best" class="y">–</b></div>
+        <div><span>Avg leg gap</span><b id="a-gap">–</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="neural">
+    <h2>Neural shell <span>model inputs → signal → order router → execution</span></h2>
+    <canvas id="c-neural" style="height:440px"></canvas>
+  </section>
+
+  <section class="panel" id="funnel">
+    <h2>Resolution funnel <span>vol cone to settlement</span></h2>
+    <canvas id="c-funnel" style="height:190px"></canvas>
+  </section>
+
+  <section class="panel" id="vwap">
+    <h2>Running combined VWAP <span>cost of each completed set vs $1.00 payout</span></h2>
+    <canvas id="c-vwap" style="height:190px"></canvas>
+  </section>
+
+  <section class="panel" id="tiles">
+    <div class="tiles">
+      <div class="tile"><span>T to settlement</span><b id="t-left">–</b></div>
+      <div class="tile"><span>Round</span><b id="t-round">–</b></div>
+      <div class="tile good"><span>Fair P(up)</span><b id="t-fair">–</b></div>
+      <div class="tile"><span>Cone ±1σ</span><b id="t-cone">–</b></div>
+      <div class="tile good"><span>Round PnL (mark)</span><b id="t-mark">–</b></div>
+      <div class="tile hot"><span>Tilt (net)</span><b id="t-tilt">–</b></div>
+    </div>
+  </section>
+</main>
+<footer>Cimphawng Terminal — a hobby toy. Every number here comes from a random-walk simulation running in your browser. No real market, wallet or money is involved. Not financial advice.</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- constants ----------
+  const COL = { grid: '#12201f', dim: '#4f6b71', text: '#b9d3d6', green: '#39ff88', red: '#ff3b5c',
+                yellow: '#ffd23f', cyan: '#3fd8ff', orange: '#ff9f2e', white: '#e8f6f7' };
+  const ROUND = 60;          // seconds per up/down market
+  const DT = 0.25;           // simulation tick (seconds)
+  const SIGMA = 0.0011;      // spot vol per sqrt(second)
+  const EDGE = 0.015;        // minimum set edge ($ per share) before bot takes both legs
+  const CANDLE_TICKS = 4;    // ticks per candle (1s candles)
+
+  const $ = id => document.getElementById(id);
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const randInt = (a, b) => Math.floor(rand(a, b + 1));
+  function gauss() {
+    let u = 0, v = 0;
+    while (!u) u = Math.random();
+    while (!v) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function ncdf(x) {
+    const t = 1 / (1 + 0.2316419 * Math.abs(x));
+    const d = 0.3989423 * Math.exp(-x * x / 2);
+    const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return x > 0 ? 1 - p : p;
+  }
+  const money = (v, dp = 2) => (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(dp);
+  const cents = v => (v * 100).toFixed(1) + '¢';
+  const median = arr => {
+    if (!arr.length) return 0;
+    const s = [...arr].sort((a, b) => a - b), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+
+  // ---------- simulation state ----------
+  const S = {
+    t: 0, spot: 0.4210, returns: [], candles: [], cur: null,
+    nUp: 0, nDn: 0, fair: 0.5, upAsk: 0.51, dnAsk: 0.51,
+    book: { bids: Array.from({ length: 7 }, () => rand(200, 4000)), asks: Array.from({ length: 7 }, () => rand(200, 4000)) },
+    pnl: 0, equity: [0], roundPnls: [], trades: 0, tradeSizes: [], rounds: 0, wins: 0, setsDone: 0,
+    setCostSum: 0, setQtySum: 0, recentSets: [], feed: [], round: null, lastLeg: null,
+  };
+
+  function newRound() {
+    S.round = {
+      n: (S.round ? S.round.n : 1000) + 1, start: S.t, s0: S.spot, path: [[0, S.spot]],
+      upQ: [], dnQ: [], upLots: 0, dnLots: 0, upCost: 0, dnCost: 0, fills: [], sets: [],
+    };
+  }
+
+  function log(msg) {
+    S.feed.push(msg);
+    if (S.feed.length > 14) S.feed.shift();
+  }
+
+  function buy(side, px, qty) {
+    const r = S.round, t = S.t - r.start;
+    px = Math.round(px * 1000) / 1000;
+    const q = side === 'UP' ? r.upQ : r.dnQ;
+    q.push({ t, px, qty });
+    if (side === 'UP') { r.upLots += qty; r.upCost += px * qty; } else { r.dnLots += qty; r.dnCost += px * qty; }
+    r.fills.push({ side, t, px, qty });
+    S.trades++;
+    S.tradeSizes.push(px * qty);
+    if (S.tradeSizes.length > 800) S.tradeSizes.shift();
+    S.lastLeg = side;
+    // FIFO: stitch UP legs to DOWN legs into complete sets
+    while (r.upQ.length && r.dnQ.length) {
+      const a = r.upQ[0], b = r.dnQ[0], m = Math.min(a.qty, b.qty);
+      const set = { t1: a.t, t2: b.t, cost: a.px + b.px, qty: m };
+      r.sets.push(set);
+      S.recentSets.push(set);
+      if (S.recentSets.length > 90) S.recentSets.shift();
+      S.setsDone += m; S.setCostSum += set.cost * m; S.setQtySum += m;
+      a.qty -= m; b.qty -= m;
+      if (!a.qty) r.upQ.shift();
+      if (!b.qty) r.dnQ.shift();
+    }
+  }
+
+  const openQty = q => q.reduce((s, f) => s + f.qty, 0);
+  const openAvg = q => { const n = openQty(q); return n ? q.reduce((s, f) => s + f.px * f.qty, 0) / n : 0; };
+
+  function botStep(tLeft) {
+    if (tLeft < 2) return;
+    const r = S.round, up = S.upAsk, dn = S.dnAsk, fair = S.fair;
+    const oUp = openQty(r.upQ), oDn = openQty(r.dnQ);
+    if (up + dn < 1 - EDGE && Math.random() < 0.7) {
+      const q = randInt(5, 30);
+      buy('UP', up, q); buy('DN', dn, q);
+      log(`SET ×${q} @ ${cents(up + dn)} · edge +${cents(1 - up - dn)}`);
+    } else if (oUp > 0 && dn + openAvg(r.upQ) < 1 - EDGE * 0.6) {
+      buy('DN', dn, oUp);
+      log(`OPPOSITE LEG DN ×${oUp} @ ${cents(dn)} · set closed`);
+    } else if (oDn > 0 && up + openAvg(r.dnQ) < 1 - EDGE * 0.6) {
+      buy('UP', up, oDn);
+      log(`OPPOSITE LEG UP ×${oDn} @ ${cents(up)} · set closed`);
+    } else if (oUp + oDn < 60 && Math.random() < 0.1) {
+      const q = randInt(4, 18);
+      if (up < fair - 0.012) { buy('UP', up, q); log(`FIRST LEG UP ×${q} @ ${cents(up)} (fair ${cents(fair)})`); }
+      else if (dn < 1 - fair - 0.012) { buy('DN', dn, q); log(`FIRST LEG DN ×${q} @ ${cents(dn)} (fair ${cents(1 - fair)})`); }
+    }
+  }
+
+  function settle() {
+    const r = S.round, upWins = S.spot >= r.s0;
+    const payout = upWins ? r.upLots : r.dnLots;
+    const pnl = payout - r.upCost - r.dnCost;
+    S.pnl += pnl;
+    S.equity.push(S.pnl);
+    if (S.equity.length > 400) S.equity.shift();
+    S.roundPnls.push(pnl);
+    if (S.roundPnls.length > 400) S.roundPnls.shift();
+    S.rounds++;
+    if (pnl > 0) S.wins++;
+    log(`SETTLED #${r.n} ${upWins ? 'UP' : 'DOWN'} · ${r.sets.length} sets · ${money(pnl)}`);
+  }
+
+  function tick() {
+    // spot: random walk with mild mean reversion so it stays in a sane range
+    const z = gauss();
+    const ret = SIGMA * Math.sqrt(DT) * z - 0.0004 * Math.log(S.spot / 0.42) * DT;
+    S.spot *= Math.exp(ret);
+    S.t += DT;
+    S.returns.push(ret);
+    if (S.returns.length > 120) S.returns.shift();
+
+    // candles
+    if (!S.cur || S.cur.n >= CANDLE_TICKS) {
+      if (S.cur) { S.candles.push(S.cur); if (S.candles.length > 90) S.candles.shift(); }
+      S.cur = { o: S.spot, h: S.spot, l: S.spot, c: S.spot, n: 0 };
+    }
+    S.cur.h = Math.max(S.cur.h, S.spot); S.cur.l = Math.min(S.cur.l, S.spot); S.cur.c = S.spot; S.cur.n++;
+
+    // order book sizes jitter
+    for (const side of ['bids', 'asks']) S.book[side] = S.book[side].map(v => clamp(v * Math.exp(gauss() * 0.12), 80, 9000));
+
+    // binary up/down market
+    const r = S.round, el = S.t - r.start, tLeft = ROUND - el;
+    const sd = SIGMA * Math.sqrt(Math.max(tLeft, 0.25));
+    S.fair = clamp(ncdf(Math.log(S.spot / r.s0) / sd), 0.01, 0.99);
+    S.nUp = 0.85 * S.nUp + 0.008 * gauss();
+    S.nDn = 0.85 * S.nDn + 0.008 * gauss();
+    S.upAsk = clamp(S.fair + 0.012 + S.nUp, 0.01, 0.99);
+    S.dnAsk = clamp(1 - S.fair + 0.012 + S.nDn, 0.01, 0.99);
+    r.path.push([el, S.spot]);
+
+    botStep(tLeft);
+    if (tLeft <= 0) { settle(); newRound(); }
+  }
+
+  // ---------- derived metrics ----------
+  function metrics() {
+    const r = S.round, rets = S.returns;
+    const n = rets.length || 1;
+    const vol = Math.sqrt(rets.reduce((s, x) => s + x * x, 0) / n) / Math.sqrt(DT); // per sqrt-second
+    const mom = rets.slice(-20).reduce((s, x) => s + x, 0);
+    const bid = S.book.bids.reduce((a, b) => a + b, 0), ask = S.book.asks.reduce((a, b) => a + b, 0);
+    const imb = (bid - ask) / (bid + ask);
+    const tLeft = Math.max(0, ROUND - (S.t - r.start));
+    const oUp = openQty(r.upQ), oDn = openQty(r.dnQ);
+    const setQty = r.sets.reduce((s, x) => s + x.qty, 0);
+    const setCost = setQty ? r.sets.reduce((s, x) => s + x.cost * x.qty, 0) / setQty : 0;
+    const legs = r.upLots + r.dnLots;
+    const mark = S.fair * r.upLots + (1 - S.fair) * r.dnLots - r.upCost - r.dnCost;
+    return { vol, mom, imb, tLeft, oUp, oDn, setQty, setCost, legs, mark,
+             tilt: r.upLots - r.dnLots, spotBps: (S.spot / r.s0 - 1) * 1e4 };
+  }
+
+  // ---------- canvas helpers ----------
+  function fit(cv) {
+    const rc = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(rc.width * d)), h = Math.max(1, Math.round(rc.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    ctx.clearRect(0, 0, rc.width, rc.height);
+    ctx.font = '9px "JetBrains Mono", monospace';
+    return [ctx, rc.width, rc.height];
+  }
+  function hgrid(ctx, w, h, rows) {
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    for (let i = 1; i < rows; i++) {
+      const y = Math.round(h * i / rows) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+  }
+
+  // ---------- panels ----------
+  function drawEquity() {
+    const [ctx, w, h] = fit($('c-equity'));
+    hgrid(ctx, w, h, 4);
+    const e = S.equity;
+    if (e.length < 2) return;
+    const lo = Math.min(0, ...e), hi = Math.max(...e, lo + 1);
+    const X = i => i / (e.length - 1) * w, Y = v => h - 6 - (v - lo) / (hi - lo) * (h - 12);
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, 'rgba(57,255,136,.28)'); g.addColorStop(1, 'rgba(57,255,136,0)');
+    ctx.beginPath(); ctx.moveTo(0, h);
+    e.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
+    ctx.lineTo(w, h); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+    ctx.beginPath();
+    e.forEach((v, i) => i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v)));
+    ctx.strokeStyle = COL.green; ctx.lineWidth = 1.5; ctx.stroke();
+    const lx = X(e.length - 1), ly = Y(e[e.length - 1]);
+    ctx.fillStyle = COL.green; ctx.beginPath(); ctx.arc(lx - 2, ly, 3, 0, 7); ctx.fill();
+    ctx.fillStyle = COL.dim; ctx.fillText('$' + hi.toFixed(0), 2, 10); ctx.fillText('$' + lo.toFixed(0), 2, h - 2);
+  }
+
+  function drawRounds() {
+    const [ctx, w, h] = fit($('c-rounds'));
+    const p = S.roundPnls.slice(-60);
+    if (!p.length) return;
+    const bw = w / 60, m = Math.max(...p.map(Math.abs), 1e-6);
+    p.forEach((v, i) => {
+      const bh = Math.max(2, Math.abs(v) / m * (h / 2 - 2));
+      ctx.fillStyle = v >= 0 ? COL.green : COL.red;
+      ctx.fillRect(i * bw + 1, v >= 0 ? h / 2 - bh : h / 2, bw - 2, bh);
+    });
+  }
+
+  function drawMatrix() {
+    const [ctx, w, h] = fit($('c-matrix'));
+    const r = S.round, cols = 12, cw = w / cols, rh = (h - 16) / 2;
+    const buckets = { UP: new Array(cols).fill(0), DN: new Array(cols).fill(0) };
+    r.fills.forEach(f => { buckets[f.side][Math.min(cols - 1, Math.floor(f.t / ROUND * cols))] += f.qty; });
+    const m = Math.max(1, ...buckets.UP, ...buckets.DN);
+    const now = Math.floor((S.t - r.start) / ROUND * cols);
+    ['UP', 'DN'].forEach((side, row) => {
+      for (let c = 0; c < cols; c++) {
+        const v = buckets[side][c] / m, x = c * cw + 1, y = row * rh + 1;
+        ctx.fillStyle = c <= now ? '#0d1a1c' : '#0a1315';
+        ctx.fillRect(x, y, cw - 2, rh - 2);
+        if (v > 0) {
+          ctx.fillStyle = `rgba(255,210,63,${0.25 + 0.75 * v})`;
+          const inset = (1 - v) * (rh - 2) * 0.35;
+          ctx.fillRect(x + 2, y + inset + 2, cw - 6, rh - 6 - inset * 2);
+        }
+      }
+      ctx.fillStyle = side === 'UP' ? COL.green : COL.red;
+      ctx.fillText(side, 4, row * rh + 12);
+    });
+    ctx.strokeStyle = COL.cyan; ctx.beginPath();
+    const nx = (S.t - r.start) / ROUND * w; ctx.moveTo(nx, 0); ctx.lineTo(nx, h - 14); ctx.stroke();
+    ctx.fillStyle = COL.dim;
+    ['0s', '15s', '30s', '45s', '60s'].forEach((l, i) => ctx.fillText(l, clamp(i / 4 * w - 8, 0, w - 22), h - 3));
+  }
+
+  function drawArcs() {
+    const [ctx, w, h] = fit($('c-arcs'));
+    const r = S.round, base = h - 16, X = t => t / ROUND * (w - 8) + 4;
+    ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(0, base + .5); ctx.lineTo(w, base + .5); ctx.stroke();
+    r.sets.forEach(s => {
+      const a = X(s.t1), b = X(s.t2), edge = 1 - s.cost;
+      const col = edge > 0.03 ? COL.yellow : edge > 0 ? COL.cyan : COL.red;
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.75; ctx.lineWidth = 1;
+      if (Math.abs(a - b) < 1.5) {
+        ctx.beginPath(); ctx.arc(a, base - 4, 3 + Math.min(s.qty, 30) / 6, 0, 7); ctx.stroke();
+      } else {
+        const mid = (a + b) / 2, rad = Math.abs(b - a) / 2;
+        ctx.beginPath(); ctx.ellipse(mid, base, rad, Math.min(base - 4, rad * 1.1), 0, Math.PI, 2 * Math.PI); ctx.stroke();
+      }
+    });
+    ctx.globalAlpha = 1;
+    r.fills.forEach(f => {
+      ctx.fillStyle = f.side === 'UP' ? COL.green : COL.red;
+      ctx.fillRect(X(f.t) - 1, f.side === 'UP' ? base - 6 : base, 2, 6);
+    });
+    ctx.fillStyle = COL.dim; ctx.fillText('round time →', 4, h - 3);
+    ctx.fillText('● same-tick set   ⌒ legged set', w - 150, h - 3);
+  }
+
+  function drawSpot() {
+    const [ctx, w, h] = fit($('c-spot'));
+    const cs = [...S.candles, S.cur].filter(Boolean).slice(-60);
+    if (!cs.length) return;
+    const pad = 44;
+    let lo = Math.min(...cs.map(c => c.l)), hi = Math.max(...cs.map(c => c.h));
+    const span = Math.max(hi - lo, 0.0008); lo -= span * 0.1; hi += span * 0.1;
+    const Y = v => 6 + (hi - v) / (hi - lo) * (h - 12), bw = (w - pad) / 60;
+    hgrid(ctx, w - pad, h, 5);
+    ctx.fillStyle = COL.dim;
+    for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4; ctx.fillText(v.toFixed(4), w - pad + 4, Y(v) + 3); }
+    // round strike line
+    const s0 = S.round.s0;
+    if (s0 > lo && s0 < hi) {
+      ctx.setLineDash([3, 3]); ctx.strokeStyle = COL.orange; ctx.beginPath();
+      ctx.moveTo(0, Y(s0)); ctx.lineTo(w - pad, Y(s0)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = COL.orange; ctx.fillText('open', 2, Y(s0) - 3);
+    }
+    cs.forEach((c, i) => {
+      const x = i * bw + bw / 2, up = c.c >= c.o;
+      ctx.strokeStyle = ctx.fillStyle = up ? COL.green : COL.red;
+      ctx.beginPath(); ctx.moveTo(x, Y(c.h)); ctx.lineTo(x, Y(c.l)); ctx.stroke();
+      const y1 = Y(Math.max(c.o, c.c)), y2 = Y(Math.min(c.o, c.c));
+      ctx.fillRect(x - bw * 0.35, y1, bw * 0.7, Math.max(1, y2 - y1));
+    });
+    const ly = Y(S.spot);
+    ctx.fillStyle = COL.yellow; ctx.fillRect(w - pad, ly - 7, pad, 14);
+    ctx.fillStyle = '#000'; ctx.fillText(S.spot.toFixed(4), w - pad + 3, ly + 3);
+  }
+
+  function renderBook() {
+    const tick = 0.0005, m = Math.max(...S.book.bids, ...S.book.asks);
+    let html = '';
+    for (let i = 6; i >= 0; i--) {
+      const v = S.book.asks[i];
+      html += `<tr class="ask"><td>${(S.spot + tick * (i + 1)).toFixed(4)}</td><td class="bar"><i style="width:${v / m * 100}%"></i>${v.toFixed(0)}</td></tr>`;
+    }
+    html += `<tr class="mid"><td colspan="2">spread ${(tick * 2 * 1e4 / S.spot).toFixed(1)} bps · mid ${S.spot.toFixed(4)}</td></tr>`;
+    for (let i = 0; i < 7; i++) {
+      const v = S.book.bids[i];
+      html += `<tr class="bid"><td>${(S.spot - tick * (i + 1)).toFixed(4)}</td><td class="bar"><i style="width:${v / m * 100}%"></i>${v.toFixed(0)}</td></tr>`;
+    }
+    $('book').innerHTML = html;
+  }
+
+  function drawFunnel(M) {
+    const [ctx, w, h] = fit($('c-funnel'));
+    const r = S.round, s0 = r.s0, el = S.t - r.start;
+    const sdEnd = SIGMA * Math.sqrt(ROUND) * 2.4;
+    const lo = s0 * Math.exp(-sdEnd), hi = s0 * Math.exp(sdEnd);
+    const X = t => 30 + t / ROUND * (w - 40), Y = v => 6 + (hi - v) / (hi - lo) * (h - 20);
+    hgrid(ctx, w, h, 4);
+    // cone from "now" to settlement
+    const bands = [[2, 'rgba(63,216,255,.08)'], [1, 'rgba(63,216,255,.16)']];
+    bands.forEach(([k, fill]) => {
+      ctx.beginPath();
+      for (let t = el; t <= ROUND; t += 1) ctx.lineTo(X(t), Y(S.spot * Math.exp(k * SIGMA * Math.sqrt(t - el))));
+      for (let t = ROUND; t >= el; t -= 1) ctx.lineTo(X(t), Y(S.spot * Math.exp(-k * SIGMA * Math.sqrt(t - el))));
+      ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+    });
+    // strike
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = COL.orange; ctx.beginPath();
+    ctx.moveTo(X(0), Y(s0)); ctx.lineTo(X(ROUND), Y(s0)); ctx.stroke(); ctx.setLineDash([]);
+    // path
+    ctx.beginPath();
+    r.path.forEach(([t, v], i) => i ? ctx.lineTo(X(t), Y(clamp(v, lo, hi))) : ctx.moveTo(X(t), Y(clamp(v, lo, hi))));
+    ctx.strokeStyle = S.spot >= s0 ? COL.green : COL.red; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = COL.white; ctx.beginPath(); ctx.arc(X(el), Y(clamp(S.spot, lo, hi)), 3, 0, 7); ctx.fill();
+    ctx.fillStyle = COL.dim;
+    ctx.fillText('UP', 4, Y(s0) - 6); ctx.fillText('DN', 4, Y(s0) + 12);
+    ctx.fillText('open', X(0), h - 2); ctx.fillText('settle', X(ROUND) - 34, h - 2);
+    ctx.fillStyle = COL.cyan;
+    ctx.fillText(`P(up) ${(S.fair * 100).toFixed(1)}%`, X(ROUND) - 90, 14);
+  }
+
+  function drawVwap() {
+    const [ctx, w, h] = fit($('c-vwap'));
+    const sets = S.recentSets, n = 90, bw = (w - 40) / n;
+    const Y = v => 10 + (1.02 - v) / (1.02 - 0.92) * (h - 26);
+    hgrid(ctx, w - 40, h, 5);
+    ctx.strokeStyle = COL.white; ctx.globalAlpha = 0.5; ctx.beginPath();
+    ctx.moveTo(0, Y(1)); ctx.lineTo(w - 40, Y(1)); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = COL.dim;
+    [1.02, 1.0, 0.98, 0.96, 0.94, 0.92].forEach(v => ctx.fillText((v * 100).toFixed(0) + '¢', w - 34, Y(v) + 3));
+    let q = 0, c = 0;
+    ctx.beginPath();
+    sets.forEach((s, i) => {
+      const x = i * bw;
+      ctx.fillStyle = s.cost < 1 ? (1 - s.cost > 0.03 ? COL.yellow : COL.green) : COL.red;
+      const y1 = Y(1), y2 = Y(clamp(s.cost, 0.92, 1.02));
+      ctx.fillRect(x + 1, Math.min(y1, y2), Math.max(1, bw - 2), Math.max(1, Math.abs(y2 - y1)));
+      q += s.qty; c += s.cost * s.qty;
+    });
+    // running vwap line
+    q = 0; c = 0; ctx.beginPath();
+    sets.forEach((s, i) => {
+      q += s.qty; c += s.cost * s.qty;
+      const y = Y(c / q), x = i * bw + bw / 2;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.strokeStyle = COL.cyan; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+    if (q) {
+      ctx.fillStyle = COL.cyan;
+      ctx.fillText(`VWAP ${(c / q * 100).toFixed(2)}¢ · locked edge ${((1 - c / q) * 100).toFixed(2)}¢/share`, 4, h - 3);
+    }
+  }
+
+  // ---------- neural shell ----------
+  const SPHERE = (() => {
+    const pts = [], N = 5200, ga = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / (N - 1)) * 2, rr = Math.sqrt(1 - y * y), th = ga * i;
+      const x = Math.cos(th) * rr, z = Math.sin(th) * rr;
+      const f = Math.sin(4.1 * x + 1.3) * Math.cos(3.3 * y) + Math.sin(4.7 * z - 0.4) * 0.8;
+      if (Math.abs(f) < 0.16) continue; // carve channels through the shell
+      const k = rand(0.82, 1.04);
+      pts.push({ x: x * k, y: y * k, z: z * k, f, s: Math.random() });
+    }
+    return pts;
+  })();
+  const INPUTS = ['Spot vs open', 'Time left', 'Short-term vol', 'Momentum', 'Book imbalance', 'Spot fees'];
+  const OUTPUTS = ['Book ask', 'First leg', 'Opposite leg', 'Tilt size', 'Set builder', 'Settlement'];
+  const pulses = [];
+
+  function bez(p0, p1, p2, p3, t) {
+    const u = 1 - t;
+    return [u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+            u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]];
+  }
+
+  function drawNeural(M, time) {
+    const [ctx, w, h] = fit($('c-neural'));
+    const narrow = w < 640;
+    const cx = w / 2, cy = h / 2, R = Math.min(w * (narrow ? 0.26 : 0.2), h * 0.4);
+    const inX = narrow ? 4 : 12, boxW = narrow ? 74 : 110, colL = inX + boxW + (narrow ? 10 : 50), colR = w - colL;
+    const rows = INPUTS.length, rowY = i => h * 0.1 + i * (h * 0.8) / (rows - 1);
+
+    // dotted router columns
+    ctx.fillStyle = 'rgba(63,216,255,.5)';
+    for (let y = 10; y < h - 10; y += 7) { ctx.fillRect(colL, y, 1.5, 1.5); ctx.fillRect(colR, y, 1.5, 1.5); }
+
+    // curves: inputs -> sphere, sphere -> outputs
+    const curves = [];
+    for (let i = 0; i < rows; i++) {
+      const a1 = Math.PI + (i - (rows - 1) / 2) * 0.32, a2 = (i - (rows - 1) / 2) * 0.32;
+      curves.push([[inX + boxW, rowY(i)], [colL + 40, rowY(i)], [cx - R * 1.3, cy + Math.sin(a1) * R * 0.9],
+                   [cx + Math.cos(a1) * R * 0.95, cy + Math.sin(a1) * R * 0.95], COL.green]);
+      curves.push([[cx + Math.cos(a2) * R * 0.95, cy + Math.sin(a2) * R * 0.95], [cx + R * 1.3, cy + Math.sin(a2) * R * 0.9],
+                   [colR - 40, rowY(i)], [w - inX - boxW, rowY(i)], COL.cyan]);
+    }
+    ctx.lineWidth = 1;
+    curves.forEach(([p0, p1, p2, p3, c]) => {
+      ctx.strokeStyle = c; ctx.globalAlpha = 0.28;
+      ctx.beginPath(); ctx.moveTo(...p0); ctx.bezierCurveTo(...p1, ...p2, ...p3); ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+
+    // pulses travelling along curves
+    if (Math.random() < 0.35) pulses.push({ c: randInt(0, curves.length - 1), t: 0, v: rand(0.006, 0.016) });
+    for (let i = pulses.length - 1; i >= 0; i--) {
+      const p = pulses[i]; p.t += p.v;
+      if (p.t >= 1) { pulses.splice(i, 1); continue; }
+      const cv = curves[p.c]; if (!cv) { pulses.splice(i, 1); continue; }
+      const [x, y] = bez(cv[0], cv[1], cv[2], cv[3], p.t);
+      ctx.fillStyle = cv[4]; ctx.shadowColor = cv[4]; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(x, y, 2, 0, 7); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // sphere
+    const ay = time * 0.00018, ax = 0.35 + Math.sin(time * 0.0001) * 0.1;
+    const cyA = Math.cos(ay), syA = Math.sin(ay), cxA = Math.cos(ax), sxA = Math.sin(ax);
+    const bias = (S.fair - 0.5) * 1.6;
+    const glow = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.25);
+    glow.addColorStop(0, 'rgba(57,255,136,.05)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, 7); ctx.fill();
+    for (const p of SPHERE) {
+      let x = p.x * cyA + p.z * syA, z = -p.x * syA + p.z * cyA, y = p.y;
+      const y2 = y * cxA - z * sxA; z = y * sxA + z * cxA; y = y2;
+      const persp = 2.8 / (2.8 - z);
+      const px = cx + x * R * persp, py = cy + y * R * persp;
+      const depth = (z + 1) / 2;
+      const green = p.f + bias > 0;
+      const tw = 0.6 + 0.4 * Math.sin(time * 0.004 + p.s * 40);
+      ctx.globalAlpha = (0.3 + 0.7 * depth) * tw;
+      ctx.fillStyle = green ? COL.green : COL.red;
+      const sz = (narrow ? 1 : 1.3) + 1.6 * depth * persp * 0.6;
+      ctx.fillRect(px, py, sz, sz);
+    }
+    ctx.globalAlpha = 1;
+    // hot spots: last legs flash inside the shell
+    ctx.fillStyle = COL.yellow; ctx.shadowColor = COL.yellow; ctx.shadowBlur = 12;
+    for (let k = 0; k < 3; k++) {
+      const a = time * 0.0007 + k * 2.1, rr = R * (0.35 + 0.15 * k);
+      ctx.beginPath(); ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a * 1.3) * rr * 0.6, 2.5, 0, 7); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // labels
+    const r = S.round;
+    const firstLeg = r.fills.length ? r.fills[0].side : '—';
+    const inVals = [
+      (M.spotBps >= 0 ? '+' : '') + M.spotBps.toFixed(1) + 'bp',
+      M.tLeft.toFixed(0) + 's',
+      (M.vol * 1e4).toFixed(1) + 'bp/√s',
+      (M.mom >= 0 ? '+' : '') + (M.mom * 1e4).toFixed(1) + 'bp',
+      (M.imb >= 0 ? '+' : '') + (M.imb * 100).toFixed(1) + '%',
+      '0.0bp',
+    ];
+    const outVals = [
+      cents(S.upAsk), firstLeg, cents(S.dnAsk), (M.tilt >= 0 ? '+' : '') + M.tilt,
+      M.setCost ? cents(M.setCost) : '—', M.tLeft < 5 ? 'LOCK' : 'HOLD',
+    ];
+    const fs = narrow ? 8 : 9;
+    ctx.font = `${fs}px "JetBrains Mono", monospace`;
+    const label = (x, y, name, val, color, right) => {
+      ctx.fillStyle = '#060c0f'; ctx.fillRect(x, y - 15, boxW, 30);
+      ctx.fillStyle = color; ctx.fillRect(right ? x + boxW - 2 : x, y - 15, 2, 30);
+      ctx.fillStyle = COL.dim; ctx.textAlign = right ? 'right' : 'left';
+      const tx = right ? x + boxW - 6 : x + 6;
+      ctx.fillText(name.toUpperCase(), tx, y - 3);
+      ctx.fillStyle = color; ctx.font = `600 ${fs + 2}px "JetBrains Mono", monospace`;
+      ctx.fillText(val, tx, y + 10);
+      ctx.font = `${fs}px "JetBrains Mono", monospace`;
+      ctx.textAlign = 'left';
+    };
+    for (let i = 0; i < rows; i++) {
+      label(inX, rowY(i), INPUTS[i], inVals[i], COL.yellow, false);
+      label(w - inX - boxW, rowY(i), OUTPUTS[i], outVals[i], COL.cyan, true);
+    }
+    ctx.fillStyle = COL.dim; ctx.textAlign = 'center';
+    ctx.fillText(`SET EDGE ${cents(1 - S.upAsk - S.dnAsk)} · FAIR UP ${(S.fair * 100).toFixed(1)}%`, cx, h - 6);
+    ctx.textAlign = 'left';
+  }
+
+  // ---------- DOM text ----------
+  function renderText(M) {
+    const avg = S.tradeSizes.length ? S.tradeSizes.reduce((a, b) => a + b, 0) / S.tradeSizes.length : 0;
+    const hrs = S.t / 3600;
+    const pnlEl = $('w-pnl');
+    pnlEl.textContent = money(S.pnl, 3);
+    pnlEl.classList.toggle('neg', S.pnl < 0);
+    $('w-sub').textContent = `▲ AVG $${avg.toFixed(2)} · MED $${median(S.tradeSizes).toFixed(2)} · ${(S.trades / Math.max(hrs, 1e-6)).toFixed(0)}/HR (sim time)`;
+    $('w-trades').textContent = S.trades.toLocaleString();
+    $('w-win').textContent = S.rounds ? (S.wins / S.rounds * 100).toFixed(1) + '%' : '–';
+    $('w-svwap').textContent = S.setQtySum ? cents(S.setCostSum / S.setQtySum) : '–';
+    $('w-rounds').textContent = S.rounds;
+    $('w-sets').textContent = S.setsDone.toLocaleString();
+    $('w-best').textContent = S.roundPnls.length ? money(Math.max(...S.roundPnls)) : '–';
+    const risk = clamp(Math.abs(M.tilt) / 6, 0, 10);
+    $('w-risk').textContent = risk.toFixed(1) + '/10';
+    $('w-riskbar').style.width = risk * 10 + '%';
+
+    const r = S.round;
+    $('m-sets').textContent = r.sets.length;
+    $('m-match').textContent = M.legs ? (M.setQty * 2 / M.legs * 100).toFixed(1) + '%' : '–';
+    $('m-cost').textContent = M.setCost ? cents(M.setCost) : '–';
+    $('m-tilt').textContent = (M.tilt >= 0 ? '+' : '') + M.tilt + (M.tilt >= 0 ? ' UP' : ' DN');
+
+    $('a-legs').textContent = r.fills.length;
+    $('a-open').textContent = `${M.oUp} / ${M.oDn}`;
+    $('a-best').textContent = r.sets.length ? cents(Math.min(...r.sets.map(s => s.cost))) : '–';
+    $('a-gap').textContent = r.sets.length ? (r.sets.reduce((s, x) => s + Math.abs(x.t2 - x.t1), 0) / r.sets.length).toFixed(1) + 's' : '–';
+
+    $('h-spot').textContent = '$' + S.spot.toFixed(4);
+    $('h-up').textContent = cents(S.upAsk);
+    $('h-dn').textContent = cents(S.dnAsk);
+    const sum = S.upAsk + S.dnAsk, hs = $('h-sum');
+    hs.textContent = cents(sum); hs.style.color = sum < 1 - EDGE ? COL.green : '#fff';
+    $('h-clock').textContent = new Date().toISOString().slice(11, 19) + ' UTC';
+
+    $('t-left').textContent = M.tLeft.toFixed(0) + 's';
+    $('t-round').textContent = '#' + r.n;
+    $('t-fair').textContent = (S.fair * 100).toFixed(1) + '%';
+    $('t-cone').textContent = '±' + (SIGMA * Math.sqrt(M.tLeft) * 1e4).toFixed(1) + 'bp';
+    $('t-mark').textContent = money(M.mark);
+    $('t-tilt').textContent = (M.tilt >= 0 ? '+' : '') + M.tilt + (M.tilt >= 0 ? ' UP' : ' DN');
+  }
+
+  let lastFeed = '';
+  function renderFeed() {
+    const txt = S.feed.slice().reverse().join('   •   ');
+    if (txt === lastFeed) return;
+    lastFeed = txt;
+    $('feed').textContent = (txt + '   •   ').repeat(2);
+  }
+
+  // ---------- main loop ----------
+  newRound();
+  // warm up: pre-run history so the dashboard opens with data
+  for (let i = 0; i < (40 * ROUND + 34) / DT; i++) tick(); // land mid-round
+
+  let speed = 1, acc = 0, prev = performance.now(), lastSlow = 0, lastText = 0;
+  $('speed').addEventListener('click', () => {
+    speed = speed === 1 ? 4 : speed === 4 ? 16 : 1;
+    $('speed').textContent = speed + '×';
+  });
+
+  function frame(now) {
+    const dt = Math.min(0.5, (now - prev) / 1000); prev = now;
+    acc += dt * speed;
+    while (acc >= DT) { tick(); acc -= DT; }
+    const M = metrics();
+    drawNeural(M, now);
+    if (now - lastSlow > 120) {
+      lastSlow = now;
+      drawEquity(); drawRounds(); drawMatrix(); drawArcs(); drawSpot(); drawFunnel(M); drawVwap();
+    }
+    if (now - lastText > 250) { lastText = now; renderText(M); renderBook(); renderFeed(); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
