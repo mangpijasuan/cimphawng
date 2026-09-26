@@ -2,7 +2,7 @@
 
 This document describes two things:
 
-1. **Today:** how the Cimphawng Terminal works right now. It is a single static web page, and everything is simulated.
+1. **Today:** how the Cimphawng Terminal works right now. It is a single static web page. The CIMP market is simulated, and the Base DEX panel reads real prices (read-only).
 2. **Target:** the design for growing it into a full-stack crypto platform for **you and the Zomi community**. It
    covers real prices from **decentralized exchanges (DEXs)**, analysis, paper trading and, last of all, automated
    trading with real money. It runs on a Hetzner server at **cimphawng.com**.
@@ -33,7 +33,8 @@ The target design is a **plan**, not built yet. Section 9 records what has been 
 ## 2. Today: the static terminal
 
 The whole app is one file, `index.html` (HTML, CSS and JavaScript, with no build step), hosted on GitHub Pages.
-There is no server and no real market. Every number comes from a simulation that runs in the browser.
+There is no server. The CIMP market and bot are a simulation that runs in the browser. The **Base DEX** panel reads real ETH and cbBTC prices
+from public APIs (read-only, no wallet).
 
 ```mermaid
 flowchart LR
@@ -69,6 +70,7 @@ The script is one self-contained function, split into these sections (search for
 | `tick()` | Advances the world by one step: news → spot price → candles → book → UP/DOWN fair value and asks → bot → settlement |
 | bot | `botStep()` decides trades. `buy()` records fills and pairs UP and DOWN legs first-in, first-out (FIFO) into complete sets. `settle()` pays out when the round ends |
 | my wallet | `W`: cash, CIMP holdings, optional copy-trading of the bot, saved to `localStorage` |
+| Base DEX live data | Finds the top USDC pool for ETH and cbBTC on Base, then polls GeckoTerminal for pool stats (30s), candles (60s) and trades (30s), falling back to DexScreener for prices. Pauses while hidden, backs off on errors (15s up to 5 min). About 5 requests a minute |
 | derived metrics | Volatility, momentum, book imbalance, tilt and round mark-to-market, recomputed for each frame |
 | canvas helpers and panels | One draw function per panel (equity, matrix, arcs, spot, funnel, VWAP, neural shell, wallet chart) |
 | main loop | Fixed-step simulation, redraws throttled (see below), a warm-up of about 40 rounds at start |
@@ -89,6 +91,7 @@ The script is one self-contained function, split into these sections (search for
 |---|---|
 | `cimphawng-wallet-v1` | Cash, CIMP amount and cost, bot copy on/off, bot P/L, last 20 actions. Open bot positions are refunded at cost when saved |
 | `cimphawng-lang` | `zo` or `en` |
+| `cimphawng-base-pools-v1` | The discovered Base pool addresses, cached for 24 hours |
 
 Both are wrapped in `try/catch`, so the page still works where storage is blocked.
 
@@ -96,6 +99,7 @@ Both are wrapped in `try/catch`, so the page still works where storage is blocke
 
 - One file of about 1,200 lines, which is fine for now but will get hard to change as features grow.
 - Everything is per-browser: no accounts, no sync between devices, and the bot stops when the tab closes.
+- Real prices depend on free public APIs and their rate limits. Every visitor's browser calls them directly.
 - No tests. It is checked by driving it in a headless browser.
 
 ---
@@ -333,7 +337,7 @@ the wallet's real on-chain balances.
 | Step | Adds | Where it runs | Real money? |
 |---|---|---|---|
 | **Now** | Simulated terminal, $100 wallet, news events, Zomi/English, CIMP | GitHub Pages | No |
-| **1. Real DEX prices** | Live prices and charts for chosen Base pools (e.g. ETH/USDC, cbBTC/USDC) next to CIMP, from free public price APIs | Browser only. Can move to `cimphawng.com` via GitHub Pages | No |
+| **1. Real DEX prices** ✅ | Live ETH and cbBTC prices, candles and trades from their top USDC pools on Base, next to CIMP. GeckoTerminal API, DexScreener fallback | Browser only. Can move to `cimphawng.com` via GitHub Pages | No |
 | **2. Analysis** | Indicators, pool liquidity and volume, simple backtests | Browser first | No |
 | **3. Full stack + community** | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member | Hetzner · cimphawng.com | No |
 | **4. Member one-tap swaps** | Quotes and Zomi previews. Members sign and send swaps from **their own wallet**. Portfolio tracking from the chain | Hetzner + member wallets | Yes, the member's own, signed by them |

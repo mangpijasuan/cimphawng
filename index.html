@@ -77,7 +77,26 @@
 
   #wallet { grid-row: span 2; }
   #spot { grid-row: span 2; }
-  #neural, #tiles, #me { grid-column: 1 / -1; }
+  #neural, #tiles, #me, #dex { grid-column: 1 / -1; }
+  .live.err { color: var(--red); border-color: var(--red); }
+
+  .dex { display: grid; grid-template-columns: 230px 1fr 300px; gap: 12px; }
+  .dex-cards { display: flex; flex-direction: column; gap: 6px; }
+  button.dcard { text-align: left; color: var(--text); border: 1px solid var(--line); background: #060c0f; padding: 8px; }
+  button.dcard.on { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+  .dcard .sym { color: #fff; font-weight: 800; font-size: 13px; }
+  .dcard .px { display: block; font-size: 18px; color: #fff; font-weight: 600; margin: 2px 0; }
+  .dcard small { display: block; color: var(--dim); font-size: 9px; }
+  .tfs { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+  .tfs button { padding: 1px 8px; color: var(--dim); border-color: var(--line); }
+  .tfs button.on { color: var(--cyan); border-color: var(--cyan); }
+  table.trades { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px; }
+  table.trades th { color: var(--dim); font-weight: 400; text-align: right; padding: 2px 4px; text-transform: uppercase; font-size: 9px; }
+  table.trades td { text-align: right; padding: 2px 4px; white-space: nowrap; }
+  table.trades th:first-child, table.trades td:first-child { text-align: left; }
+  .dex a { color: var(--cyan); text-decoration: none; }
+  .dex-foot { color: var(--dim); font-size: 10px; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .dex-note { margin-top: 8px; font-size: 10px; }
 
   #me { border-color: #1f4a2e; box-shadow: inset 0 0 40px rgba(57,255,136,.04); }
   .me { display: grid; grid-template-columns: 1.1fr 1fr 1.3fr; gap: 14px; }
@@ -131,6 +150,9 @@
   footer { padding: 6px 12px 16px; color: var(--dim); font-size: 10px; }
 
   @media (max-width: 900px) {
+    .dex { grid-template-columns: 1fr; }
+    .dex-cards { flex-direction: row; }
+    button.dcard { flex: 1; min-width: 0; }
     .me { grid-template-columns: 1fr; }
     .grid { grid-template-columns: 1fr; }
     #wallet, #spot { grid-row: auto; }
@@ -151,6 +173,7 @@
     <div>UP<b id="h-up">–</b></div>
     <div>DOWN<b id="h-dn">–</b></div>
     <div>SUM<b id="h-sum">–</b></div>
+    <div>ETH<b id="h-eth">–</b></div>
     <div>MY WALLET<b id="h-me">–</b></div>
     <div id="h-clock" class="muted">–</div>
     <button id="speed" title="Simulation speed">1×</button>
@@ -202,6 +225,23 @@
         <ul class="hist" id="me-hist"></ul>
       </div>
     </div>
+  </section>
+
+  <section class="panel" id="dex">
+    <h2>Base DEX <span>live prices · real data, read-only</span><em class="live" id="dex-status">…</em></h2>
+    <div class="dex">
+      <div class="dex-cards" id="dex-cards"></div>
+      <div>
+        <div class="tfs" id="dex-tfs"></div>
+        <canvas id="c-dex" style="height:240px"></canvas>
+        <div class="dex-foot"><span id="dex-pool"></span><span id="dex-updated"></span></div>
+      </div>
+      <div>
+        <div class="muted">RECENT TRADES</div>
+        <table class="trades" id="dex-trades"></table>
+      </div>
+    </div>
+    <div class="muted dex-note">Real market data from Base DEX pools via GeckoTerminal. Prices can lag a few seconds. Nothing here trades.</div>
   </section>
 
   <section class="panel" id="wallet">
@@ -387,6 +427,26 @@
     'Bot copy-trading OFF (open trades still settle)': 'Bot zuihna tawp (a kipan sa te a bei lai ding)',
     'Wallet reset to $100.00': 'Sum-ip $100.00 ah kipan kik',
     'Reset your pretend wallet back to $100 cash and 0 CIMP?': 'Na sum-ip $100 le CIMP 0 ah kipan kik ding maw?',
+    // Base DEX (real data)
+    'live prices · real data, read-only': 'a man taktak · en theih bek',
+    'RECENT TRADES': 'TU-A LEI-ZUAK',
+    'Real market data from Base DEX pools via GeckoTerminal. Prices can lag a few seconds. Nothing here trades.':
+      'Base DEX pool te a man taktak, GeckoTerminal panin. A man sekhen tawmvei a zekai thei hi. Hih mun ah lei-zuak kibawl lo hi.',
+    'LIVE': 'TU-IN',
+    'loading…': 'kipan lai…',
+    'OFFLINE': 'KIZOM LO',
+    'Cannot reach the price service. Retrying in {s}s.': 'Man thu la theih lo hi. Sekhen {s} khit ciangin ki-zom kik ding.',
+    'Rate limited by the price service. Retrying in {s}s.': 'Man thu la tam lua hi. Sekhen {s} khit ciangin ki-zom kik ding.',
+    'Vol 24h': 'Lei-zuak 24h',
+    'Liq': 'Sum om',
+    'View pool': 'Pool en in',
+    'Updated {t}': 'A thak {t}',
+    'Side': 'Lam',
+    'Price': 'Man',
+    'Time': 'Hun',
+    'Buy': 'Lei',
+    'Sell': 'Zuak',
+    'No trades yet': 'Lei-zuak om nai lo',
     // bot wallet
     'Bot wallet': 'Bot sum-ip',
     'ALL-TIME PNL': 'A KIPAT PANIN PHATTUAMNA',
@@ -708,6 +768,242 @@
     $('me-tag').textContent = tr(W.botOn ? 'BOT ON' : 'BOT OFF');
     $('me-hist').innerHTML = W.hist.slice(0, 5)
       .map(h => `<li>${h.t} · <b>${h.msg.replace(/[<>&]/g, '')}</b></li>`).join('') || `<li>${tr('No trades yet: try Buy $10.')}</li>`;
+  }
+
+  // ---------- Base DEX live data (read-only) ----------
+  // Real prices from Base DEX pools via the free GeckoTerminal API, with DexScreener as a price fallback.
+  // Nothing here trades: it only reads public market data. Polling stays well under GeckoTerminal's
+  // free limit (~30 calls/min) and pauses while the tab is hidden.
+  const GT = 'https://api.geckoterminal.com/api/v2';
+  const DS = 'https://api.dexscreener.com';
+  const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+  const DEX_MARKETS = [
+    { sym: 'ETH', name: 'Ether (WETH)', token: '0x4200000000000000000000000000000000000006' },
+    { sym: 'cbBTC', name: 'Coinbase Wrapped BTC', token: '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf' },
+  ];
+  const TIMEFRAMES = { '5m': ['minute', 5], '15m': ['minute', 15], '1h': ['hour', 1], '4h': ['hour', 4], '1D': ['day', 1] };
+  const POOLS_KEY = 'cimphawng-base-pools-v1', POOLS_TTL = 24 * 3600e3;
+  const DEX_EVERY = { pools: 30e3, candles: 60e3, trades: 30e3 };
+  const D = { sel: 0, tf: '15m', candles: [], trades: [], status: 'loading', err: '', updated: null,
+              backoff: 0, retryAt: 0, busy: false, due: { pools: 0, candles: 0, trades: 0 } };
+
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const isHex = v => /^0x[0-9a-fA-F]+$/.test(v || '');
+  const num = v => (v === null || v === undefined || v === '' ? NaN : +v);
+  const fmtPx = v => !isFinite(v) ? '–'
+    : v >= 1000 ? '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : v >= 1 ? '$' + v.toFixed(3) : '$' + v.toPrecision(4);
+  const fmtBig = v => !isFinite(v) ? '–' : v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B'
+    : v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + v.toFixed(0);
+  const fmtAmt = v => !isFinite(v) ? '–' : v >= 100 ? v.toFixed(1) : v >= 1 ? v.toFixed(3) : v.toPrecision(3);
+  const dexName = id => String(id || '').replace(/[-_]base$/i, '').replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase()).trim() || 'DEX';
+  // a pool's 24h change is for its base token; when our token is the quote side, invert it
+  const invertPct = p => isFinite(p) ? (1 / (1 + p / 100) - 1) * 100 : NaN;
+
+  async function getJSON(url) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const res = await fetch(url, { signal: ctl.signal, headers: { Accept: 'application/json' } });
+      if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
+      return await res.json();
+    } finally { clearTimeout(timer); }
+  }
+
+  // Find each token's most liquid USDC pool on Base (cached for a day).
+  async function discoverPools() {
+    try {
+      const c = JSON.parse(localStorage.getItem(POOLS_KEY) || 'null');
+      if (c && Date.now() - c.t < POOLS_TTL && c.pools.length === DEX_MARKETS.length && c.pools.every(p => isHex(p.pool))) {
+        c.pools.forEach((p, i) => Object.assign(DEX_MARKETS[i], p));
+        return;
+      }
+    } catch (e) { /* no cache */ }
+    for (const m of DEX_MARKETS) {
+      if (m.pool) continue;
+      try {
+        const j = await getJSON(`${GT}/networks/base/tokens/${m.token}/pools?page=1`);
+        const best = (j.data || [])
+          .map(p => ({ a: p.attributes || {}, r: p.relationships || {} }))
+          .map(p => ({ ...p, b: String(p.r.base_token?.data?.id || '').toLowerCase(), q: String(p.r.quote_token?.data?.id || '').toLowerCase() }))
+          .filter(p => (p.b === 'base_' + USDC || p.q === 'base_' + USDC) && isHex(p.a.address))
+          .sort((x, y) => num(y.a.reserve_in_usd) - num(x.a.reserve_in_usd))[0];
+        if (!best) throw new Error('no USDC pool');
+        Object.assign(m, { pool: best.a.address.toLowerCase(), base: best.b === 'base_' + m.token, dex: dexName(best.r.dex?.data?.id) });
+      } catch (e) {
+        if (e.status === 429) throw e;
+        const j = await getJSON(`${DS}/latest/dex/tokens/${m.token}`);
+        const best = (j.pairs || [])
+          .filter(p => p.chainId === 'base' && isHex(p.pairAddress))
+          .filter(p => [p.baseToken?.address, p.quoteToken?.address].map(a => String(a).toLowerCase()).includes(USDC))
+          .sort((x, y) => num(y.liquidity?.usd) - num(x.liquidity?.usd))[0];
+        if (!best) throw new Error('no pool found for ' + m.sym);
+        Object.assign(m, { pool: best.pairAddress.toLowerCase(), base: String(best.baseToken.address).toLowerCase() === m.token, dex: dexName(best.dexId) });
+      }
+    }
+    try {
+      localStorage.setItem(POOLS_KEY, JSON.stringify({ t: Date.now(), pools: DEX_MARKETS.map(m => ({ pool: m.pool, base: m.base, dex: m.dex })) }));
+    } catch (e) { /* ignore */ }
+  }
+
+  async function refreshPools() {
+    const addrs = DEX_MARKETS.map(m => m.pool).join(',');
+    try {
+      const j = await getJSON(`${GT}/networks/base/pools/multi/${addrs}`);
+      for (const p of j.data || []) {
+        const a = p.attributes || {}, m = DEX_MARKETS.find(x => x.pool === String(a.address).toLowerCase());
+        if (!m) continue;
+        const ch = num(a.price_change_percentage?.h24);
+        Object.assign(m, {
+          price: num(m.base ? a.base_token_price_usd : a.quote_token_price_usd),
+          ch24: m.base ? ch : invertPct(ch), vol24: num(a.volume_usd?.h24), liq: num(a.reserve_in_usd),
+          dex: dexName(p.relationships?.dex?.data?.id) || m.dex,
+        });
+      }
+    } catch (e) {
+      if (e.status === 429) throw e;
+      const j = await getJSON(`${DS}/latest/dex/pairs/base/${addrs}`);
+      for (const p of j.pairs || []) {
+        const m = DEX_MARKETS.find(x => x.pool === String(p.pairAddress).toLowerCase());
+        if (!m) continue;
+        const usd = num(p.priceUsd), native = num(p.priceNative), ch = num(p.priceChange?.h24);
+        Object.assign(m, {
+          price: m.base ? usd : usd / native, ch24: m.base ? ch : invertPct(ch),
+          vol24: num(p.volume?.h24), liq: num(p.liquidity?.usd), dex: dexName(p.dexId),
+        });
+      }
+    }
+  }
+
+  async function refreshCandles() {
+    const m = DEX_MARKETS[D.sel], tf = D.tf, [unit, agg] = TIMEFRAMES[tf];
+    const j = await getJSON(`${GT}/networks/base/pools/${m.pool}/ohlcv/${unit}?aggregate=${agg}&limit=120&currency=usd&token=${m.base ? 'base' : 'quote'}`);
+    if (DEX_MARKETS[D.sel] !== m || D.tf !== tf) return;  // selection changed while loading
+    D.candles = (j.data?.attributes?.ohlcv_list || [])
+      .map(r => ({ t: num(r[0]) * 1000, o: num(r[1]), h: num(r[2]), l: num(r[3]), c: num(r[4]), v: num(r[5]) }))
+      .filter(c => [c.t, c.o, c.h, c.l, c.c].every(isFinite))
+      .sort((a, b) => a.t - b.t);
+  }
+
+  async function refreshTrades() {
+    const m = DEX_MARKETS[D.sel];
+    const j = await getJSON(`${GT}/networks/base/pools/${m.pool}/trades`);
+    if (DEX_MARKETS[D.sel] !== m) return;
+    D.trades = (j.data || []).slice(0, 12).map(x => {
+      const a = x.attributes || {}, fromUs = String(a.from_token_address || '').toLowerCase() === m.token;
+      const toUs = String(a.to_token_address || '').toLowerCase() === m.token;
+      // the pool reports buy/sell for its base token; flip it when our token is the quote side
+      const side = fromUs ? 'sell' : toUs ? 'buy' : (a.kind === 'buy') === !!m.base ? 'buy' : 'sell';
+      return {
+        side, usd: num(a.volume_in_usd), tx: a.tx_hash, t: Date.parse(a.block_timestamp),
+        amt: num(fromUs ? a.from_token_amount : toUs ? a.to_token_amount : NaN),
+        px: num(fromUs ? a.price_from_in_usd : toUs ? a.price_to_in_usd : NaN),
+      };
+    });
+  }
+
+  const DEX_JOBS = { pools: refreshPools, candles: refreshCandles, trades: refreshTrades };
+  async function dexTick() {
+    if (D.busy || document.hidden || Date.now() < D.retryAt) return;
+    D.busy = true;
+    try {
+      if (!DEX_MARKETS.every(m => m.pool)) await discoverPools();
+      for (const k of Object.keys(DEX_JOBS)) {
+        if (Date.now() < D.due[k]) continue;
+        await DEX_JOBS[k]();
+        D.due[k] = Date.now() + DEX_EVERY[k];
+      }
+      Object.assign(D, { status: 'live', err: '', backoff: 0, updated: new Date() });
+    } catch (e) {
+      D.backoff = Math.min(D.backoff ? D.backoff * 2 : 15e3, 300e3);
+      Object.assign(D, { status: 'error', err: e.status === 429 ? 'rate' : 'net', retryAt: Date.now() + D.backoff });
+    } finally {
+      D.busy = false;
+      renderDex();
+    }
+  }
+  function dexSelect(i, tf) {
+    if (i !== undefined) D.sel = i;
+    if (tf) D.tf = tf;
+    D.candles = [];
+    if (i !== undefined) D.trades = [];
+    D.due.candles = D.due.trades = 0;
+    renderDex();
+    dexTick();
+  }
+
+  function drawDex() {
+    const [ctx, w, h] = fit($('c-dex'));
+    const cs = D.candles, pad = 62, volH = h * 0.18, top = 8, bot = h - 16;
+    if (!cs.length) {
+      ctx.fillStyle = D.status === 'error' ? COL.red : COL.dim; ctx.textAlign = 'center';
+      const secs = Math.max(0, Math.ceil((D.retryAt - Date.now()) / 1000));
+      ctx.fillText(D.status === 'error'
+        ? tr(D.err === 'rate' ? 'Rate limited by the price service. Retrying in {s}s.' : 'Cannot reach the price service. Retrying in {s}s.', { s: secs })
+        : tr('loading…'), w / 2, h / 2);
+      ctx.textAlign = 'left';
+      return;
+    }
+    let lo = Math.min(...cs.map(c => c.l)), hi = Math.max(...cs.map(c => c.h));
+    const span = Math.max(hi - lo, hi * 1e-4); lo -= span * 0.06; hi += span * 0.06;
+    const Y = v => top + (hi - v) / (hi - lo) * (bot - volH - top), bw = (w - pad) / cs.length;
+    const vmax = Math.max(...cs.map(c => c.v || 0), 1e-9);
+    hgrid(ctx, w - pad, bot - volH, 5);
+    ctx.fillStyle = COL.dim;
+    for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4; ctx.fillText(fmtPx(v), w - pad + 4, Y(v) + 3); }
+    cs.forEach((c, i) => {
+      const x = i * bw + bw / 2, up = c.c >= c.o;
+      ctx.strokeStyle = ctx.fillStyle = up ? COL.green : COL.red;
+      ctx.beginPath(); ctx.moveTo(x, Y(c.h)); ctx.lineTo(x, Y(c.l)); ctx.stroke();
+      const y1 = Y(Math.max(c.o, c.c)), y2 = Y(Math.min(c.o, c.c));
+      ctx.fillRect(x - Math.max(bw * 0.35, 0.5), y1, Math.max(bw * 0.7, 1), Math.max(1, y2 - y1));
+      ctx.globalAlpha = 0.35;
+      const vh = (c.v || 0) / vmax * (volH - 4);
+      ctx.fillRect(x - Math.max(bw * 0.35, 0.5), bot - vh, Math.max(bw * 0.7, 1), vh);
+      ctx.globalAlpha = 1;
+    });
+    // time labels
+    ctx.fillStyle = COL.dim;
+    const daily = D.tf === '1D';
+    for (let k = 0; k < 4; k++) {
+      const i = Math.round(k / 3 * (cs.length - 1)), d = new Date(cs[i].t);
+      const lab = daily ? d.toISOString().slice(5, 10) : d.toTimeString().slice(0, 5);
+      ctx.textAlign = k === 0 ? 'left' : k === 3 ? 'right' : 'center';
+      ctx.fillText(lab, clamp(i * bw + bw / 2, 0, w - pad), h - 3);
+    }
+    ctx.textAlign = 'left';
+    const last = cs[cs.length - 1].c, ly = Y(last);
+    ctx.fillStyle = COL.yellow; ctx.fillRect(w - pad, ly - 7, pad, 14);
+    ctx.fillStyle = '#000'; ctx.fillText(fmtPx(last), w - pad + 3, ly + 3);
+  }
+
+  function renderDex() {
+    const st = $('dex-status');
+    st.textContent = D.status === 'live' ? '● ' + tr('LIVE') : D.status === 'error' ? tr('OFFLINE') : tr('loading…');
+    st.classList.toggle('err', D.status === 'error');
+    $('dex-cards').innerHTML = DEX_MARKETS.map((m, i) => {
+      const ch = m.ch24, cls = !isFinite(ch) ? '' : ch >= 0 ? 'up' : 'down';
+      return `<button class="dcard${i === D.sel ? ' on' : ''}" data-dex="${i}">
+        <span class="sym">${esc(m.sym)}</span> <span class="${cls}">${isFinite(ch) ? (ch >= 0 ? '▲ +' : '▼ ') + ch.toFixed(2) + '%' : ''}</span>
+        <span class="px">${fmtPx(m.price)}</span>
+        <small>${tr('Vol 24h')} ${fmtBig(m.vol24)} · ${tr('Liq')} ${fmtBig(m.liq)}</small>
+        <small>${m.dex ? esc(m.dex) + ' · ' : ''}${esc(m.sym)}/USDC</small></button>`;
+    }).join('');
+    $('dex-tfs').innerHTML = Object.keys(TIMEFRAMES)
+      .map(k => `<button data-tf="${k}" class="${k === D.tf ? 'on' : ''}">${k}</button>`).join('');
+    const m = DEX_MARKETS[D.sel];
+    $('dex-pool').innerHTML = isHex(m.pool)
+      ? `${esc(m.dex || 'DEX')} · <a href="https://www.geckoterminal.com/base/pools/${m.pool}" target="_blank" rel="noopener">${tr('View pool')} ↗</a>` : '';
+    $('dex-updated').textContent = D.updated ? tr('Updated {t}', { t: D.updated.toTimeString().slice(0, 8) }) : '';
+    $('h-eth').textContent = fmtPx(DEX_MARKETS[0].price);
+    const rows = D.trades.map(x => `<tr>
+        <td class="${x.side === 'buy' ? 'up' : 'down'}">${tr(x.side === 'buy' ? 'Buy' : 'Sell')}</td>
+        <td>${fmtPx(x.px)}</td><td>${fmtAmt(x.amt)}</td><td>${fmtBig(x.usd)}</td>
+        <td>${isHex(x.tx) ? `<a href="https://basescan.org/tx/${x.tx}" target="_blank" rel="noopener">` : ''}${isFinite(x.t) ? new Date(x.t).toTimeString().slice(0, 8) : '–'}${isHex(x.tx) ? '</a>' : ''}</td>
+      </tr>`).join('');
+    $('dex-trades').innerHTML = `<tr><th>${tr('Side')}</th><th>${tr('Price')}</th><th>${esc(m.sym)}</th><th>USD</th><th>${tr('Time')}</th></tr>`
+      + (rows || `<tr><td colspan="5" class="muted">${D.status === 'live' ? tr('No trades yet') : '…'}</td></tr>`);
+    drawDex();
   }
 
   // ---------- derived metrics ----------
@@ -1161,10 +1457,17 @@
   });
   $('me-reset').addEventListener('click', () => { wReset(); renderMe(); });
   addEventListener('pagehide', wSave);
+  $('dex-cards').addEventListener('click', e => { const b = e.target.closest('[data-dex]'); if (b) dexSelect(+b.dataset.dex); });
+  $('dex-tfs').addEventListener('click', e => { const b = e.target.closest('[data-tf]'); if (b) dexSelect(undefined, b.dataset.tf); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) dexTick(); });
+  addEventListener('resize', () => drawDex());
+  renderDex();
+  dexTick();
+  setInterval(dexTick, 2000);
   $('lang').addEventListener('click', () => {
     LANG = LANG === 'zo' ? 'en' : 'zo';
     try { localStorage.setItem('cimphawng-lang', LANG); } catch (e) { /* ignore */ }
-    applyLang(); renderMe();
+    applyLang(); renderMe(); renderDex();
   });
 
   let speed = 1, acc = 0, prev = performance.now(), lastSlow = 0, lastText = 0, lastCurve = 0;
@@ -1189,6 +1492,7 @@
       W.curve.push(wTotal());
       if (W.curve.length > 600) W.curve.shift();
       drawMe();
+      drawDex();
     }
     requestAnimationFrame(frame);
   }
