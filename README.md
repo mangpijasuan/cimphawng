@@ -52,6 +52,11 @@ Trading jargon (VWAP, FIFO, UP/DOWN, set, leg, tilt) stays in English on purpose
 
 The `1×` button in the header cycles the simulation speed through 1×, 4× and 16×.
 
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app works today and the planned design for real
+market data, analysis, paper trading and automated trading on a Hetzner server.
+
 ## Run it
 
 It's a single file with no build step:
