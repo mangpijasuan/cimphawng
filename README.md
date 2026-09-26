@@ -34,6 +34,14 @@ as profit whatever the outcome. That's the game the bot plays:
   If you reload mid-round, open bot trades are refunded at cost.
 - **Reset to $100** starts over.
 
+## Zomi / English
+
+The page opens in **Zomi**. The **English** / **Zomi** button in the header switches language,
+and your choice is remembered. All the Zomi words live in one list, `const ZO = { ... }`, near the
+top of the `<script>` in `index.html`. The English text is on the left and the Zomi on the right, so fixing
+a word is just editing the right-hand side. Keep any `{name}` parts, because numbers are filled in there.
+Trading jargon (VWAP, FIFO, UP/DOWN, set, leg, tilt) stays in English on purpose.
+
 The `1×` button in the header cycles the simulation speed through 1×, 4× and 16×.
 
 ## Run it
