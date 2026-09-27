@@ -67,6 +67,26 @@ prices. Pools are found automatically and remembered for a day. The page makes a
 limit is about 30), pauses while the tab is hidden, and backs off and retries if the service is down or busy.
 **It's read-only: nothing here trades or connects a wallet.** The CIMP simulation is unchanged.
 
+## Analysis (learning only, not advice)
+
+Under the Base DEX chart:
+
+- **Moving averages** on the chart: MA20 (yellow) and MA50 (cyan), the average price of the last 20 and 50 candles.
+- **RSI 14** below the chart. Above 70 means the price rose fast (overbought); below 30 means it fell fast (oversold).
+- **Signal cards** in Zomi or English:
+  - **Trend:** is the price above or below both averages?
+  - **RSI:** overbought, oversold or neutral.
+  - **Volatility:** the typical daily move, labelled calm, normal or wild.
+  - **Golden or death cross:** shown when MA20 has just crossed MA50.
+- **Backtest:** runs a pretend $100 over the chart's history (up to 300 candles) with one of two simple strategies:
+  - **MA cross:** buy when MA20 crosses above MA50, sell when it crosses below.
+  - **RSI 30/70:** buy when RSI drops below 30, sell when it rises above 70.
+
+  It charges a 0.3% fee per swap, trades at the next candle's open (so it never uses future prices), and compares
+  the result with simply buying and holding. It shows the final value, return, number of trades, win rate and biggest drop.
+
+Everything here is for learning. Past results don't predict the future.
+
 ## Price news
 
 Every minute or two, a news headline pops up in a banner under the live feed. Good news (green ▲),
