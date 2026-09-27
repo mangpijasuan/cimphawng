@@ -49,3 +49,21 @@ def test_price_book_staleness():
     with pytest.raises(StalePrice):
         book.get("ETH")
     assert not book.fresh()
+
+
+async def test_partial_discovery_failure_retries_everything():
+    calls = {"btc": 0}
+
+    def flaky(request: httpx.Request) -> httpx.Response:
+        if f"/tokens/{TOKENS['cbBTC']}/pools" in request.url.path:
+            calls["btc"] += 1
+            if calls["btc"] == 1:
+                return httpx.Response(502)  # transient error on the second token
+        return handler(request)
+
+    feed = GeckoTerminalFeed(PriceBook(60), 20, client=httpx.AsyncClient(transport=httpx.MockTransport(flaky)))
+    with pytest.raises(httpx.HTTPStatusError):
+        await feed.discover()
+    assert feed.pools == {}  # nothing half-finished kept
+    await feed.discover()
+    assert set(feed.pools) == {"ETH", "cbBTC"}

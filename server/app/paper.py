@@ -86,10 +86,9 @@ async def swap(
         raise HTTPException(400, f"assets must be one of {', '.join(ASSETS)}")
     if body.from_asset == body.to_asset:
         raise HTTPException(400, "pick two different assets")
-    try:
-        px_in, px_out = book.get(body.from_asset), book.get(body.to_asset)
+    try:  # fail fast before queueing for the lock
+        book.get(body.from_asset), book.get(body.to_asset)
     except StalePrice:
-        # stale-data guard: never trade on old prices, even pretend ones
         raise HTTPException(503, "live prices are unavailable right now; try again shortly")
 
     await ensure_account(db, user, s)
@@ -100,6 +99,12 @@ async def swap(
     src, dst = rows[body.from_asset], rows[body.to_asset]
     if src.amount < body.amount:
         raise HTTPException(400, f"not enough {body.from_asset}")
+    try:
+        # read prices only once the locks are held, so a long wait can't let a stale price through
+        px_in, px_out = book.get(body.from_asset), book.get(body.to_asset)
+    except StalePrice:
+        # stale-data guard: never trade on old prices, even pretend ones
+        raise HTTPException(503, "live prices are unavailable right now; try again shortly")
 
     value_usd = body.amount * px_in
     if value_usd < s.min_trade_usd:
@@ -138,8 +143,12 @@ async def reset(
     user: User = Depends(current_user), db: AsyncSession = Depends(db_dep),
     book: PriceBook = Depends(book_dep), s: Settings = Depends(settings_dep),
 ):
-    await db.execute(delete(Balance).where(Balance.user_id == user.id))
+    # One transaction under the same row locks swaps use. Rows are reset in place, never deleted,
+    # so a swap running at the same moment always finds them.
+    await ensure_account(db, user, s)
+    q = select(Balance).where(Balance.user_id == user.id).order_by(Balance.asset).with_for_update()
+    for b in (await db.execute(q)).scalars().all():
+        b.amount = s.paper_start_usdc if b.asset == "USDC" else Decimal(0)
     await db.execute(delete(PaperTrade).where(PaperTrade.user_id == user.id))
     await db.commit()
-    await ensure_account(db, user, s)
     return await portfolio(db, user, book, s)

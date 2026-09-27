@@ -71,6 +71,8 @@ class GeckoTerminalFeed:
         return r.json()
 
     async def discover(self) -> None:
+        # Build the full set first: a failure part-way leaves self.pools empty, so the next loop retries all.
+        found: dict[str, tuple[str, bool]] = {}
         for asset, token in TOKENS.items():
             j = await self._json(f"{GT}/networks/base/tokens/{token}/pools?page=1")
             best = None
@@ -85,7 +87,8 @@ class GeckoTerminalFeed:
                     best = (reserve, str(a["address"]).lower(), base == f"base_{token}")
             if best is None:
                 raise RuntimeError(f"no USDC pool found for {asset}")
-            self.pools[asset] = (best[1], best[2])
+            found[asset] = (best[1], best[2])
+        self.pools = found
         log.info("price pools: %s", self.pools)
 
     async def refresh(self) -> None:

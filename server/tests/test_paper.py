@@ -117,3 +117,36 @@ async def test_new_member_opening_many_tabs_at_once(app, signed_in):
     results = await asyncio.gather(*[signed_in.get("/api/paper") for _ in range(6)])
     assert [r.status_code for r in results] == [200] * 6
     assert all(r.json()["total_usd"] == "100.00" for r in results)
+
+
+async def test_reset_while_a_swap_is_mid_way(app, signed_in, monkeypatch):
+    """Pause a swap right after it has made sure its balance rows exist, run a reset in that gap,
+    then let the swap continue. The swap must still find its rows, and the books must add up."""
+    import asyncio
+    import sys
+
+    from app import paper
+
+    original = paper.ensure_account
+
+    async def ensure_with_pauses(db, user, s):
+        caller = sys._getframe(1).f_code.co_name
+        if caller == "reset":
+            await asyncio.sleep(0.8)  # hold the reset here, whatever it did before this call
+        await original(db, user, s)
+        if caller == "swap":
+            await asyncio.sleep(0.4)  # hold the swap between "rows exist" and "lock rows"
+
+    monkeypatch.setattr(paper, "ensure_account", ensure_with_pauses)
+    await signed_in.get("/api/paper")
+    swap = asyncio.create_task(
+        signed_in.post("/api/paper/swap", json={"from_asset": "USDC", "to_asset": "ETH", "amount": "7"}))
+    await asyncio.sleep(0.1)  # the swap is now paused inside its gap
+    reset = await signed_in.post("/api/paper/reset", json={})
+    swap_result = await swap
+    assert reset.status_code == 200
+    assert swap_result.status_code == 200, swap_result.text
+    trades = (await signed_in.get("/api/paper/trades")).json()["trades"]
+    bal = {b["asset"]: Decimal(b["amount"]) for b in (await signed_in.get("/api/paper")).json()["balances"]}
+    assert bal["USDC"] == Decimal(100) - sum(Decimal(t["amount_in"]) for t in trades)
+    assert bal.get("ETH", Decimal(0)) == sum(Decimal(t["amount_out"]) for t in trades)
