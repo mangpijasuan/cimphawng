@@ -7,6 +7,7 @@ async def test_new_member_starts_with_100_usdc(signed_in):
     j = (await signed_in.get("/api/paper")).json()
     assert j["balances"] == [{"asset": "USDC", "amount": "100", "price_usd": "1", "value_usd": "100.00"}]
     assert j["total_usd"] == "100.00" and j["prices_fresh"] is True
+    assert j["prices"] == {"USDC": "1", "ETH": "2000", "cbBTC": "50000"}
 
 
 async def test_swap_usdc_to_eth_charges_fee(signed_in):

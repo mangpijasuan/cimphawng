@@ -54,8 +54,15 @@ async def portfolio(db: AsyncSession, user: User, book: PriceBook, s: Settings) 
             px, value, priced = None, None, False
         items.append({"asset": b.asset, "amount": num(b.amount), "price_usd": num(px) if px else None,
                       "value_usd": str(value.quantize(Decimal("0.01"))) if value is not None else None})
+    prices = {}
+    for a in ASSETS:  # every tradable asset, so the app can preview any swap
+        try:
+            prices[a] = num(book.get(a))
+        except StalePrice:
+            prices[a] = None
     return {
         "balances": items,
+        "prices": prices,
         "total_usd": str(total.quantize(Decimal("0.01"))) if priced else None,
         "start_usd": num(s.paper_start_usdc),
         "prices_fresh": priced,

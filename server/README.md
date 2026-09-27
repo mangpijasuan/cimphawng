@@ -12,7 +12,7 @@ Part of step 3 in [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md). Deployment: [
 | POST | `/api/auth/verify` | `{nonce, signature}`: checks the signature and sets a session cookie |
 | POST | `/api/auth/logout` | Ends the session |
 | GET | `/api/me` | The signed-in member: address, role (`owner` or `member`) |
-| GET | `/api/paper` | Paper portfolio: balances valued at live prices (starts with 100 pretend USDC) |
+| GET | `/api/paper` | Paper portfolio: balances valued at live prices (starts with 100 pretend USDC), plus the live price of every tradable asset |
 | POST | `/api/paper/swap` | `{from_asset, to_asset, amount}` among USDC, ETH, cbBTC at live prices, with a 0.3% fee |
 | GET | `/api/paper/trades` | Trade history, newest first |
 | POST | `/api/paper/reset` | Back to 100 USDC |

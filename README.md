@@ -105,7 +105,7 @@ Trading jargon (VWAP, FIFO, UP/DOWN, set, leg, tilt) stays in English on purpose
 
 The `1×` button in the header cycles the simulation speed through 1×, 4× and 16×.
 
-## Server (step 3, in progress)
+## Server and paper trading (step 3, in progress)
 
 The `server/` folder holds the Python API that will run on Hetzner at cimphawng.com:
 
@@ -113,8 +113,15 @@ The `server/` folder holds the Python API that will run on Hetzner at cimphawng.
 - **Paper trading** for every member: 100 pretend USDC to swap between USDC, ETH and cbBTC at **real** Base DEX prices, with a 0.3% fee.
 
 `infra/` has the Docker Compose, Caddy (automatic HTTPS) and PostgreSQL setup. See [server/README.md](server/README.md)
-for the API, and [docs/DEPLOY.md](docs/DEPLOY.md) for step-by-step Hetzner setup. The web page doesn't use the server yet;
-connecting them is the next part of step 3.
+for the API, and [docs/DEPLOY.md](docs/DEPLOY.md) for step-by-step Hetzner setup.
+
+The web page's **Paper trading** panel (on the Home / Inn tab) uses the server:
+
+- **Connect wallet:** sign in with MetaMask, Coinbase Wallet, Rabby or any wallet with a browser extension or in-app browser.
+- See your pretend portfolio, swap with a live "you get about…" preview, see your last trades, reset, and sign out.
+- It says clearly that Cimphawng never asks for a seed phrase, and that signing in is free.
+
+On GitHub Pages there's no server, so the panel just says paper trading starts once cimphawng.com is live.
 
 ## Architecture
 
