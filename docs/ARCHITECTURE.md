@@ -341,9 +341,13 @@ the wallet's real on-chain balances.
 | **Now** | Simulated terminal, $100 wallet, news events, Zomi/English, CIMP | GitHub Pages | No |
 | **1. Real DEX prices** ✅ | Live ETH and cbBTC prices, candles and trades from their top USDC pools on Base, next to CIMP. GeckoTerminal API, DexScreener fallback | Browser only. Can move to `cimphawng.com` via GitHub Pages | No |
 | **2. Analysis** ✅ | MA20/MA50, RSI 14, volatility, crossover signals, and a backtest (MA cross or RSI 30/70, 0.3% fee, no lookahead) on up to 300 candles. More Base coins still to choose | Browser | No |
-| **3. Full stack + community** | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member | Hetzner · cimphawng.com | No |
+| **3. Full stack + community** 🚧 | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member. **Part 1 done:** API with wallet sign-in and paper swaps at live prices, PostgreSQL, Caddy, Docker Compose, deploy guide, CI tests. **Next:** connect the web app, paper bots, Alembic migrations, a separate ingestor and Redis once more services need live data | Hetzner · cimphawng.com | No |
 | **4. Member one-tap swaps** | Quotes and Zomi previews. Members sign and send swaps from **their own wallet**. Portfolio tracking from the chain | Hetzner + member wallets | Yes, the member's own, signed by them |
 | **5. Owner's automated bot** | Execution service live adapter, bot wallet, every section 5.1 guard, alerts | Hetzner | Yes, the owner's bot wallet only |
+
+> **Step 3 part 1 simplifications.** The price feed runs inside the API process, as one shared GeckoTerminal poller for
+> all members. Tables are created on start-up. Redis isn't used yet. These change when the strategy engine and bots arrive
+> and several services need the same live data.
 
 ### 7.1 Repository layout (from step 3)
 

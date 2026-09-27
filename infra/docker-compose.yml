@@ -1,0 +1,56 @@
+# Cimphawng on one Hetzner server: Caddy (HTTPS + web app) -> API -> PostgreSQL.
+# Usage (from this folder):  cp .env.example .env  # then edit it
+#                            docker compose up -d --build
+name: cimphawng
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cimphawng
+      POSTGRES_USER: cimp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cimp -d cimphawng"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # no ports: only reachable by the api container
+
+  api:
+    build: ../server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      CIMP_DATABASE_URL: postgresql+asyncpg://cimp:${POSTGRES_PASSWORD}@db:5432/cimphawng
+      CIMP_SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in infra/.env}
+      CIMP_SITE_URI: https://${SITE_DOMAIN}
+      CIMP_OWNER_ADDRESSES: ${OWNER_ADDRESSES:-}
+      CIMP_COOKIE_SECURE: "true"
+    # no ports: Caddy forwards /api/* to it
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../index.html:/srv/web/index.html:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
