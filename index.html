@@ -97,6 +97,17 @@
   .dex a { color: var(--cyan); text-decoration: none; }
   .dex-foot { color: var(--dim); font-size: 10px; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
   .dex-note { margin-top: 8px; font-size: 10px; }
+  #paper { grid-column: 1 / -1; }
+  .pp-cols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
+  .pp-safety { border: 1px solid #1f4a2e; background: rgba(57,255,136,.06); color: var(--text); padding: 8px 10px; margin: 10px 0; font-size: 11px; }
+  .pp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .pp-head code { color: var(--cyan); }
+  .pp-swap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+  .pp-swap select, .pp-swap input { font: inherit; color: #fff; background: #060c0f; border: 1px solid var(--line); padding: 5px 8px; }
+  .pp-swap input { width: 130px; }
+  #pp-msg { min-height: 1.4em; margin-top: 4px; }
+  #pp-msg.err { color: var(--red); } #pp-msg.ok { color: var(--green); }
+  #pp-bal span { text-transform: none; }
   .ana { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
   .sigrow { display: flex; align-items: center; gap: 10px; background: #060c0f; border: 1px solid var(--line); padding: 8px; margin-top: 6px; }
   .sigrow .pill { flex: none; min-width: 84px; text-align: center; padding: 4px 8px; font-weight: 700; font-size: 11px; }
@@ -167,6 +178,7 @@
     .dex-cards { flex-direction: row; }
     button.dcard { flex: 1; min-width: 0; }
     .ana { grid-template-columns: 1fr; }
+    .pp-cols { grid-template-columns: 1fr; }
     .me { grid-template-columns: 1fr; }
     .grid { grid-template-columns: 1fr; }
     #wallet, #spot { grid-row: auto; }
@@ -242,6 +254,17 @@
     .tiles { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .tile { background: var(--card); border: 0; border-radius: 16px; padding: 12px; }
     .tile.hot { box-shadow: inset 0 0 0 2px var(--red); }
+    .pp-safety { border: 0; border-radius: 14px; background: rgba(90,214,125,.1); padding: 12px; font-size: 12px; }
+    .pp-swap select, .pp-swap input { border: 0; border-radius: 12px; background: var(--card); padding: 12px; font-size: 15px; }
+    .pp-swap { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px;
+               grid-template-areas: "from arrow to" "amt amt max" "go go go"; }
+    #pp-from { grid-area: from; } #pp-to { grid-area: to; } .pp-swap > span { grid-area: arrow; align-self: center; }
+    #pp-amt { grid-area: amt; min-width: 0; width: 100%; } #pp-max { grid-area: max; } #pp-go { grid-area: go; font-size: 16px; }
+    #pp-logout, #pp-reset { border: 0; border-radius: 12px; background: var(--card); padding: 8px 14px; }
+    #pp-reset { margin-top: 4px; }
+    .pp-swap button { padding: 12px 16px; border-radius: 12px; border: 0; background: var(--card); font-weight: 600; }
+    #pp-go { background: var(--mgreen); color: #0c1a11; box-shadow: 0 4px 0 #3a9d57; }
+    #pp-connect { width: 100%; padding: 14px; border-radius: 14px; border: 0; background: var(--mgreen); color: #0c1a11; font-size: 15px; font-weight: 700; box-shadow: 0 4px 0 #3a9d57; }
     .sigrow { background: var(--card); border: 0; border-radius: 16px; padding: 12px; gap: 12px; }
     .sigrow .pill { border-radius: 10px; padding: 8px 6px; font-size: 13px; min-width: 88px; }
     .sigrow b { font-size: 14px; } .sigrow small { font-size: 11px; }
@@ -332,6 +355,37 @@
         <ul class="hist" id="me-hist"></ul>
       </div>
     </div>
+  </section>
+
+  <section class="panel" id="paper" data-tab="home">
+    <h2>Paper trading <span>real Base prices · pretend money</span><em class="live" id="pp-status">…</em></h2>
+    <div id="pp-off" class="muted" hidden>The server is not running yet. Paper trading starts once cimphawng.com is live on the Hetzner server.</div>
+    <div id="pp-signin" hidden>
+      <div class="muted">Sign in with your own wallet to get 100 pretend USDC and trade ETH and cbBTC at real prices.</div>
+      <div class="pp-safety">🔒 <span>Cimphawng will never ask for your seed phrase or private key. Signing in is free and sends no transaction.</span></div>
+      <button class="c" id="pp-connect">Connect wallet</button>
+    </div>
+    <div id="pp-app" hidden>
+      <div class="pp-cols">
+        <div>
+          <div class="pp-head"><code id="pp-addr"></code><em class="live" id="pp-role"></em><button class="dim" id="pp-logout">Sign out</button></div>
+          <div class="me-total"><span id="pp-total">–</span><small id="pp-pl"></small></div>
+          <div class="kv" id="pp-bal"></div>
+        </div>
+        <div>
+          <div class="pp-swap">
+            <select id="pp-from"></select><span>→</span><select id="pp-to"></select>
+            <input id="pp-amt" inputmode="decimal" autocomplete="off" placeholder="0.00">
+            <button class="dim" id="pp-max">Max</button>
+            <button class="g" id="pp-go">Swap</button>
+          </div>
+          <div class="muted" id="pp-quote"></div>
+          <ul class="hist" id="pp-trades"></ul>
+          <button class="dim" id="pp-reset">Reset to 100 USDC</button>
+        </div>
+      </div>
+    </div>
+    <div class="muted" id="pp-msg"></div>
   </section>
 
   <section class="panel" id="dex" data-tab="markets">
@@ -559,6 +613,31 @@
     'Bot copy-trading OFF (open trades still settle)': 'Bot zuihna tawp (a kipan sa te a bei lai ding)',
     'Wallet reset to $100.00': 'Sumbawm $100.00 ah kipan kik',
     'Reset your pretend wallet back to $100 cash and 0 CIMP?': 'Na sumbawm $100 le CIMP 0 ah kipan kik ding maw?',
+    // paper trading (server)
+    'Paper trading': 'Kimawlna lei-zuak',
+    'real Base prices · pretend money': 'Base a man taktak · kimawlna sum',
+    'The server is not running yet. Paper trading starts once cimphawng.com is live on the Hetzner server.':
+      'Server kipan nai lo. cimphawng.com Hetzner server tungah a kipat ciangin kimawlna lei-zuak kipan ding hi.',
+    'Sign in with your own wallet to get 100 pretend USDC and trade ETH and cbBTC at real prices.':
+      'Na sumbawm mahmah tawh sign in inla, kimawlna USDC 100 ngah in, ETH le cbBTC a man taktak tawh lei-zuak in.',
+    'Cimphawng will never ask for your seed phrase or private key. Signing in is free and sends no transaction.':
+      'Cimphawng in na seed phrase ahi zongin private key ahi zongin a ngen ngei kei ding hi. Sign in pen a man om lo a, transaction khat zong kikhak lo hi.',
+    'Connect wallet': 'Sumbawm zom in',
+    'Sign out': 'Pusuak',
+    'Max': 'Khempeuh',
+    'Swap': 'Swap',
+    'Reset to 100 USDC': 'USDC 100 ah kipan kik',
+    'Reset your paper account to 100 USDC?': 'Na kimawlna account USDC 100 ah kipan kik ding maw?',
+    'No wallet found. Open this site in your wallet app\'s browser (MetaMask, Coinbase Wallet, Rabby), or install a wallet extension.':
+      'Sumbawm kimu lo. Hih site na sumbawm app (MetaMask, Coinbase Wallet, Rabby) browser sungah hong in, ahih kei leh wallet extension khat koih in.',
+    'Waiting for your wallet…': 'Na sumbawm ngak lai…',
+    'Cancelled in your wallet.': 'Na sumbawm sungah na nawl hi.',
+    'Signed in.': 'Sign in zo hi.',
+    'Enter an amount.': 'Zah khat gelh in.',
+    'You get about {out} {to} (0.3% fee)': '{out} {to} bang na ngah ding (0.3% man)',
+    'Swapped {a} {f} → {b} {t}': '{a} {f} → {b} {t} na swap hi',
+    'owner': 'owner',
+    'member': 'member',
     // Base DEX (real data)
     'live prices · real data, read-only': 'a man taktak · en theih bek',
     'RECENT TRADES': 'TU-A LEI-ZUAK',
@@ -1357,6 +1436,115 @@
     drawDex();
   }
 
+  // ---------- paper trading (talks to the cimphawng.com server) ----------
+  // Wallet sign-in is Sign-In with Ethereum: the member signs a free message in their own wallet.
+  // Nothing here can move real coins: the server only keeps pretend balances.
+  const P = { online: false, user: null, pf: null, trades: [], busy: false };
+
+  async function api(path, body) {
+    const opts = { credentials: 'same-origin' };
+    if (body !== undefined) Object.assign(opts, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch('/api' + path, opts);
+    let j = null;
+    try { j = await res.json(); } catch (e) { /* not JSON */ }
+    if (!res.ok) {
+      const e = new Error(j && typeof j.detail === 'string' ? j.detail : 'Error ' + res.status);
+      e.status = res.status;
+      throw e;
+    }
+    return j;
+  }
+  function ppMsg(text, kind) {
+    const el = $('pp-msg');
+    el.textContent = text || '';
+    el.className = 'muted' + (kind ? ' ' + kind : '');
+  }
+  const ppNum = (v, dp) => { const n = +v; return !isFinite(n) ? '–' : n >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : n.toFixed(dp ?? (n >= 1 ? 4 : 6)).replace(/\.?0+$/, '') || '0'; };
+
+  async function ppInit() {
+    try { await api('/health'); P.online = true; } catch (e) { P.online = false; }
+    if (P.online) {
+      try { P.user = await api('/me'); await ppLoad(); } catch (e) { P.user = null; }
+    }
+    renderPaper();
+  }
+  async function ppLoad() {
+    P.pf = await api('/paper');
+    P.trades = (await api('/paper/trades?limit=6')).trades;
+  }
+
+  async function ppConnect() {
+    const eth = window.ethereum;
+    if (!eth || typeof eth.request !== 'function') {
+      ppMsg(tr('No wallet found. Open this site in your wallet app\'s browser (MetaMask, Coinbase Wallet, Rabby), or install a wallet extension.'), 'err');
+      return;
+    }
+    try {
+      ppMsg(tr('Waiting for your wallet…'));
+      const [address] = await eth.request({ method: 'eth_requestAccounts' });
+      const n = await api('/auth/nonce?address=' + encodeURIComponent(address));
+      const hex = '0x' + Array.from(new TextEncoder().encode(n.message), b => b.toString(16).padStart(2, '0')).join('');
+      const signature = await eth.request({ method: 'personal_sign', params: [hex, address] });
+      P.user = await api('/auth/verify', { nonce: n.nonce, signature });
+      await ppLoad();
+      ppMsg(tr('Signed in.'), 'ok');
+    } catch (e) {
+      ppMsg(e && e.code === 4001 ? tr('Cancelled in your wallet.') : (e && e.message) || String(e), 'err');
+    }
+    renderPaper();
+  }
+
+  function ppQuote() {
+    const q = $('pp-quote'), f = $('pp-from').value, t = $('pp-to').value, amt = +$('pp-amt').value;
+    const px = a => +((P.pf && P.pf.prices && P.pf.prices[a]) || 0);
+    q.textContent = amt > 0 && f !== t && px(f) > 0 && px(t) > 0
+      ? tr('You get about {out} {to} (0.3% fee)', { out: ppNum(amt * px(f) / px(t) * 0.997), to: t }) : '';
+  }
+
+  async function ppSwap() {
+    if (P.busy) return;
+    const from_asset = $('pp-from').value, to_asset = $('pp-to').value, amount = $('pp-amt').value.trim();
+    if (!(+amount > 0)) { ppMsg(tr('Enter an amount.'), 'err'); return; }
+    P.busy = true;
+    try {
+      const r = await api('/paper/swap', { from_asset, to_asset, amount });
+      P.pf = r.portfolio;
+      P.trades = (await api('/paper/trades?limit=6')).trades;
+      $('pp-amt').value = '';
+      ppMsg(tr('Swapped {a} {f} → {b} {t}', { a: ppNum(r.trade.amount_in), f: from_asset, b: ppNum(r.trade.amount_out), t: to_asset }), 'ok');
+    } catch (e) {
+      ppMsg(e.message, 'err');
+      if (e.status === 401) P.user = null;
+    } finally { P.busy = false; renderPaper(); }
+  }
+
+  function renderPaper() {
+    $('pp-off').hidden = P.online;
+    $('pp-signin').hidden = !P.online || !!P.user;
+    $('pp-app').hidden = !P.online || !P.user;
+    const st = $('pp-status');
+    st.textContent = P.online ? '● ' + tr('LIVE') : tr('OFFLINE');
+    st.classList.toggle('err', !P.online);
+    if (!P.user || !P.pf) return;
+    const a = P.user.address;
+    $('pp-addr').textContent = a.slice(0, 6) + '…' + a.slice(-4);
+    $('pp-role').textContent = tr(P.user.role);
+    const total = P.pf.total_usd === null ? NaN : +P.pf.total_usd, pl = total - +P.pf.start_usd;
+    $('pp-total').textContent = isFinite(total) ? '$' + total.toFixed(2) : '–';
+    $('pp-pl').textContent = isFinite(pl) ? money(pl) : '';
+    $('pp-pl').classList.toggle('up', pl > 0.004); $('pp-pl').classList.toggle('down', pl < -0.004);
+    $('pp-bal').innerHTML = P.pf.balances.map(b => `<div><span>${esc(b.asset)}</span><b>${ppNum(b.amount)}</b><small class="muted">${b.value_usd ? '$' + esc(b.value_usd) : ''}</small></div>`).join('');
+    const assets = ['USDC', 'ETH', 'cbBTC'];
+    for (const [id, def] of [['pp-from', 'USDC'], ['pp-to', 'ETH']]) {
+      const sel = $(id), cur = sel.value || def;
+      if (!sel.options.length) sel.innerHTML = assets.map(x => `<option>${x}</option>`).join('');
+      sel.value = cur;
+    }
+    $('pp-trades').innerHTML = P.trades.map(t =>
+      `<li>${esc(new Date(t.created_at).toTimeString().slice(0, 5))} · <b>${ppNum(t.amount_in)} ${esc(t.from_asset)} → ${ppNum(t.amount_out)} ${esc(t.to_asset)}</b></li>`).join('');
+    ppQuote();
+  }
+
   // ---------- phone tabs ----------
   const TABS = ['home', 'markets', 'cimp', 'bot', 'ai'];
   const shown = id => $(id).offsetParent !== null;  // skip drawing charts on hidden tabs
@@ -1830,6 +2018,33 @@
   $('dex-tfs').addEventListener('click', e => { const b = e.target.closest('[data-tf]'); if (b) dexSelect(undefined, b.dataset.tf); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) dexTick(); });
   addEventListener('resize', () => drawDex());
+  $('pp-connect').addEventListener('click', ppConnect);
+  $('pp-go').addEventListener('click', ppSwap);
+  $('pp-amt').addEventListener('input', ppQuote);
+  $('pp-from').addEventListener('change', ppQuote);
+  $('pp-to').addEventListener('change', ppQuote);
+  $('pp-max').addEventListener('click', () => {
+    const b = P.pf && P.pf.balances.find(x => x.asset === $('pp-from').value);
+    $('pp-amt').value = b ? b.amount : '';
+    ppQuote();
+  });
+  $('pp-logout').addEventListener('click', async () => {
+    try { await api('/auth/logout', {}); } catch (e) { /* already signed out */ }
+    Object.assign(P, { user: null, pf: null, trades: [] });
+    ppMsg(''); renderPaper();
+  });
+  $('pp-reset').addEventListener('click', async () => {
+    if (!confirm(tr('Reset your paper account to 100 USDC?'))) return;
+    try { P.pf = await api('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
+    renderPaper();
+  });
+  // keep the portfolio's values fresh while signed in
+  setInterval(async () => {
+    if (!P.user || document.hidden || P.busy) return;
+    try { P.pf = await api('/paper'); renderPaper(); } catch (e) { if (e.status === 401) { P.user = null; renderPaper(); } }
+  }, 30000);
+  ppInit();
+
   let savedTab = 'home';
   try { savedTab = localStorage.getItem('cimphawng-tab') || 'home'; } catch (e) { /* default */ }
   setTab(savedTab);
@@ -1840,7 +2055,7 @@
   $('lang').addEventListener('click', () => {
     LANG = LANG === 'zo' ? 'en' : 'zo';
     try { localStorage.setItem('cimphawng-lang', LANG); } catch (e) { /* ignore */ }
-    applyLang(); renderMe(); renderDex();
+    applyLang(); renderMe(); renderDex(); renderPaper();
   });
 
   let speed = 1, acc = 0, prev = performance.now(), lastSlow = 0, lastText = 0, lastCurve = 0;
