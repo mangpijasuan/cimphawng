@@ -105,6 +105,17 @@ Trading jargon (VWAP, FIFO, UP/DOWN, set, leg, tilt) stays in English on purpose
 
 The `1×` button in the header cycles the simulation speed through 1×, 4× and 16×.
 
+## Server (step 3, in progress)
+
+The `server/` folder holds the Python API that will run on Hetzner at cimphawng.com:
+
+- **Wallet sign-in** (Sign-In with Ethereum). Members sign a free message in their own wallet. The server never sees keys.
+- **Paper trading** for every member: 100 pretend USDC to swap between USDC, ETH and cbBTC at **real** Base DEX prices, with a 0.3% fee.
+
+`infra/` has the Docker Compose, Caddy (automatic HTTPS) and PostgreSQL setup. See [server/README.md](server/README.md)
+for the API, and [docs/DEPLOY.md](docs/DEPLOY.md) for step-by-step Hetzner setup. The web page doesn't use the server yet;
+connecting them is the next part of step 3.
+
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app works today and the planned design:

@@ -1,0 +1,40 @@
+name: Server tests
+
+on:
+  pull_request:
+    paths: ["server/**", ".github/workflows/server-tests.yml"]
+  push:
+    branches: [main]
+    paths: ["server/**", ".github/workflows/server-tests.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cimp
+          POSTGRES_PASSWORD: cimp
+          POSTGRES_DB: cimp_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cimp" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest pytest-asyncio
+      - name: Tests (SQLite)
+        run: python -m pytest -q
+      - name: Tests (PostgreSQL)
+        run: python -m pytest -q
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://cimp:cimp@localhost:5432/cimp_test
