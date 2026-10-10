@@ -64,6 +64,9 @@ class GeckoTerminalFeed:
         self.refresh_s = refresh_s
         self.client = client or httpx.AsyncClient(timeout=12, headers={"Accept": "application/json"})
         self.pools: dict[str, tuple[str, bool]] = {}  # asset -> (pool address, token is base side)
+        self.ok = 0  # successful refreshes, for the System monitor
+        self.failed = 0
+        self.last_error: dict | None = None
 
     async def _json(self, url: str) -> dict:
         r = await self.client.get(url)
@@ -95,13 +98,19 @@ class GeckoTerminalFeed:
         addrs = ",".join(p for p, _ in self.pools.values())
         j = await self._json(f"{GT}/networks/base/pools/multi/{addrs}")
         by_pool = {str(p["attributes"]["address"]).lower(): p["attributes"] for p in j.get("data", [])}
+        missing = []
         for asset, (pool, is_base) in self.pools.items():
             a = by_pool.get(pool)
-            if not a:
-                continue
-            price = Decimal(a["base_token_price_usd" if is_base else "quote_token_price_usd"])
+            try:
+                price = Decimal(a["base_token_price_usd" if is_base else "quote_token_price_usd"]) if a else Decimal(0)
+            except (ArithmeticError, TypeError, ValueError):
+                price = Decimal(0)
             if price > 0:
                 self.book.set(asset, price)
+            else:
+                missing.append(asset)
+        if missing:  # the others were still updated; this counts as a failed refresh so it shows on the monitor
+            raise RuntimeError(f"no usable price for {', '.join(missing)}")
 
     async def run(self) -> None:
         backoff = self.refresh_s
@@ -110,10 +119,13 @@ class GeckoTerminalFeed:
                 if not self.pools:
                     await self.discover()
                 await self.refresh()
+                self.ok += 1
                 backoff = self.refresh_s
             except asyncio.CancelledError:
                 raise
             except Exception as e:  # keep running: stale prices simply block swaps
+                self.failed += 1
+                self.last_error = {"at": int(time.time()), "error": f"{type(e).__name__}: {e}"[:200]}
                 backoff = min(backoff * 2, 300)
                 log.warning("price refresh failed (%s); retrying in %ss", e, backoff)
             await asyncio.sleep(backoff)

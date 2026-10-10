@@ -4,7 +4,7 @@ from decimal import ROUND_DOWN, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -141,7 +141,8 @@ def trade_out(t: PaperTrade) -> dict:
 async def trades(
     limit: int = Query(50, ge=1, le=200), user: User = Depends(current_user), db: AsyncSession = Depends(db_dep)
 ):
-    q = select(PaperTrade).where(PaperTrade.user_id == user.id).order_by(PaperTrade.id.desc()).limit(limit)
+    q = (select(PaperTrade).where(PaperTrade.user_id == user.id, PaperTrade.archived.is_(False))
+         .order_by(PaperTrade.id.desc()).limit(limit))
     return {"trades": [trade_out(t) for t in (await db.execute(q)).scalars().all()]}
 
 
@@ -156,6 +157,6 @@ async def reset(
     q = select(Balance).where(Balance.user_id == user.id).order_by(Balance.asset).with_for_update()
     for b in (await db.execute(q)).scalars().all():
         b.amount = s.paper_start_usdc if b.asset == "USDC" else Decimal(0)
-    await db.execute(delete(PaperTrade).where(PaperTrade.user_id == user.id))
+    await db.execute(update(PaperTrade).where(PaperTrade.user_id == user.id).values(archived=True))
     await db.commit()
     return await portfolio(db, user, book, s)

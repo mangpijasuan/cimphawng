@@ -45,6 +45,7 @@ class User(Base):
     display_name: Mapped[str | None] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     last_login_at: Mapped[datetime] = mapped_column(default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(default=utcnow)  # last signed-in use, updated at most every 5 min
 
 
 class AuthNonce(Base):
@@ -93,3 +94,5 @@ class PaperTrade(Base):
     price_out_usd: Mapped[Decimal] = mapped_column(Amount)
     fee_usd: Mapped[Decimal] = mapped_column(Amount)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # A reset hides a member's trades from their history but keeps them, so community totals don't drop.
+    archived: Mapped[bool] = mapped_column(default=False)

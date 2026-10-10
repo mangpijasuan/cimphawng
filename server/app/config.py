@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     price_refresh_s: int = 20
     price_max_age_s: int = 120
 
+    # System monitor: how long database figures are cached
+    stats_cache_s: int = 5
+
     @property
     def owners(self) -> set[str]:
         return {a.strip().lower() for a in self.owner_addresses.split(",") if a.strip()}
