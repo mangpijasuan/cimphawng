@@ -1439,7 +1439,8 @@
   // ---------- paper trading (talks to the cimphawng.com server) ----------
   // Wallet sign-in is Sign-In with Ethereum: the member signs a free message in their own wallet.
   // Nothing here can move real coins: the server only keeps pretend balances.
-  const P = { online: false, user: null, pf: null, trades: [], busy: false };
+  // gen goes up on every change the member makes, so an older background refresh can't overwrite it
+  const P = { online: false, user: null, pf: null, trades: [], busy: false, gen: 0 };
 
   async function api(path, body) {
     const opts = { credentials: 'same-origin' };
@@ -1464,7 +1465,7 @@
   async function ppInit() {
     try { await api('/health'); P.online = true; } catch (e) { P.online = false; }
     if (P.online) {
-      try { P.user = await api('/me'); await ppLoad(); } catch (e) { P.user = null; }
+      try { P.user = await api('/me'); await ppLoad(); } catch (e) { Object.assign(P, { user: null, pf: null, trades: [] }); }
     }
     renderPaper();
   }
@@ -1486,7 +1487,14 @@
       const hex = '0x' + Array.from(new TextEncoder().encode(n.message), b => b.toString(16).padStart(2, '0')).join('');
       const signature = await eth.request({ method: 'personal_sign', params: [hex, address] });
       P.user = await api('/auth/verify', { nonce: n.nonce, signature });
-      await ppLoad();
+      P.gen++;
+      try {
+        await ppLoad();
+      } catch (e) {
+        // signed in, but the portfolio didn't load: go back to the sign-in view rather than show an empty one
+        Object.assign(P, { user: null, pf: null, trades: [] });
+        throw e;
+      }
       ppMsg(tr('Signed in.'), 'ok');
     } catch (e) {
       ppMsg(e && e.code === 4001 ? tr('Cancelled in your wallet.') : (e && e.message) || String(e), 'err');
@@ -1508,6 +1516,7 @@
     P.busy = true;
     try {
       const r = await api('/paper/swap', { from_asset, to_asset, amount });
+      P.gen++;
       P.pf = r.portfolio;
       P.trades = (await api('/paper/trades?limit=6')).trades;
       $('pp-amt').value = '';
@@ -1520,8 +1529,8 @@
 
   function renderPaper() {
     $('pp-off').hidden = P.online;
-    $('pp-signin').hidden = !P.online || !!P.user;
-    $('pp-app').hidden = !P.online || !P.user;
+    $('pp-signin').hidden = !P.online || !!(P.user && P.pf);
+    $('pp-app').hidden = !P.online || !P.user || !P.pf;
     const st = $('pp-status');
     st.textContent = P.online ? '● ' + tr('LIVE') : tr('OFFLINE');
     st.classList.toggle('err', !P.online);
@@ -2030,18 +2039,23 @@
   });
   $('pp-logout').addEventListener('click', async () => {
     try { await api('/auth/logout', {}); } catch (e) { /* already signed out */ }
+    P.gen++;
     Object.assign(P, { user: null, pf: null, trades: [] });
     ppMsg(''); renderPaper();
   });
   $('pp-reset').addEventListener('click', async () => {
     if (!confirm(tr('Reset your paper account to 100 USDC?'))) return;
-    try { P.pf = await api('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
+    try { P.gen++; P.pf = await api('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
     renderPaper();
   });
   // keep the portfolio's values fresh while signed in
   setInterval(async () => {
     if (!P.user || document.hidden || P.busy) return;
-    try { P.pf = await api('/paper'); renderPaper(); } catch (e) { if (e.status === 401) { P.user = null; renderPaper(); } }
+    const gen = P.gen;
+    try {
+      const pf = await api('/paper');
+      if (gen === P.gen) { P.pf = pf; renderPaper(); }  // drop it if a swap/reset/sign-out happened meanwhile
+    } catch (e) { if (e.status === 401 && gen === P.gen) { Object.assign(P, { user: null, pf: null, trades: [] }); renderPaper(); } }
   }, 30000);
   ppInit();
 
