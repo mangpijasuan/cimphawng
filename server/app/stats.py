@@ -4,6 +4,8 @@ Request counters live in memory (they reset when the server restarts). Database 
 for a few seconds so many viewers don't add load.
 """
 
+import asyncio
+import logging
 import os
 import resource
 import sys
@@ -13,11 +15,12 @@ from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from sqlalchemy import func, select, text
+from sqlalchemy import case, func, select, text
 
 from .models import PaperTrade, User, utcnow
 
 router = APIRouter(prefix="/api")
+log = logging.getLogger("cimphawng.stats")
 
 
 class RequestStats:
@@ -59,36 +62,58 @@ def _rss_mb() -> float:
 
 
 async def _db_stats(request: Request) -> dict:
+    """Cached; one refresh at a time (others wait for it), and a database failure doesn't hide other stats."""
     app = request.app
-    cache = getattr(app.state, "db_stats_cache", None)
-    ttl = app.state.settings.stats_cache_s
-    if cache and time.time() - cache[0] < ttl:
-        return cache[1]
+    if not hasattr(app.state, "db_stats_lock"):
+        app.state.db_stats_lock = asyncio.Lock()
+
+    def cached():
+        c = getattr(app.state, "db_stats_cache", None)
+        return c[1] if c and time.time() - c[0] < app.state.settings.stats_cache_s else None
+
+    if (hit := cached()) is not None:
+        return hit
+    async with app.state.db_stats_lock:
+        if (hit := cached()) is not None:  # another request refreshed it while we waited
+            return hit
+        try:
+            out = await _query_db_stats(app)
+        except Exception as e:
+            log.warning("database stats failed: %s", e)
+            out = {"db": {"engine": app.state.engine.dialect.name, "ok": False, "error": type(e).__name__},
+                   "community": None}
+        app.state.db_stats_cache = (time.time(), out)
+        return out
+
+
+def _count_if(cond):
+    return func.coalesce(func.sum(case((cond, 1), else_=0)), 0)
+
+
+async def _query_db_stats(app) -> dict:
     now = utcnow()
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     t0 = time.perf_counter()
     async with app.state.sessionmaker() as db:
         await db.execute(text("SELECT 1"))
         ping_ms = round((time.perf_counter() - t0) * 1000, 2)
-        members = await db.scalar(select(func.count()).select_from(User))
-        active = await db.scalar(select(func.count()).select_from(User).where(User.last_login_at >= now - timedelta(hours=24)))
-        trades_total = await db.scalar(select(func.count()).select_from(PaperTrade))
-        trades_today = await db.scalar(select(func.count()).select_from(PaperTrade).where(PaperTrade.created_at >= day_start))
-        trades_hour = await db.scalar(select(func.count()).select_from(PaperTrade)
-                                      .where(PaperTrade.created_at >= now - timedelta(hours=1)))
+        # each table in one query, so its numbers come from the same snapshot
+        members, active = (await db.execute(select(
+            func.count(), _count_if(User.last_seen_at >= now - timedelta(hours=24))).select_from(User))).one()
+        trades_total, trades_today, trades_hour = (await db.execute(select(
+            func.count(), _count_if(PaperTrade.created_at >= day_start),
+            _count_if(PaperTrade.created_at >= now - timedelta(hours=1))).select_from(PaperTrade))).one()
         if db.bind.dialect.name == "postgresql":
             size = await db.scalar(text("SELECT pg_database_size(current_database())"))
         else:
             path = Path(app.state.engine.url.database or "")
             size = path.stat().st_size if path.is_file() else None
-    out = {
-        "db": {"engine": app.state.engine.dialect.name, "ping_ms": ping_ms,
+    return {
+        "db": {"engine": app.state.engine.dialect.name, "ok": True, "ping_ms": ping_ms,
                "size_mb": round(size / 1e6, 2) if size is not None else None},
-        "community": {"members": members, "active_24h": active, "paper_trades_total": trades_total,
-                      "paper_trades_today": trades_today, "paper_trades_last_hour": trades_hour},
+        "community": {"members": members, "active_24h": int(active), "paper_trades_total": trades_total,
+                      "paper_trades_today": int(trades_today), "paper_trades_last_hour": int(trades_hour)},
     }
-    app.state.db_stats_cache = (time.time(), out)
-    return out
 
 
 @router.get("/stats")

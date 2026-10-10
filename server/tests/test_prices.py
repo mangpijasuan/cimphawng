@@ -67,3 +67,20 @@ async def test_partial_discovery_failure_retries_everything():
     assert feed.pools == {}  # nothing half-finished kept
     await feed.discover()
     assert set(feed.pools) == {"ETH", "cbBTC"}
+
+
+async def test_refresh_missing_a_pool_is_a_failure_but_updates_the_rest():
+    def partial(request: httpx.Request) -> httpx.Response:
+        if "/pools/multi/" in request.url.path:
+            return httpx.Response(200, json={"data": [
+                {"attributes": {"address": ETH_POOL, "base_token_price_usd": "3456.78", "quote_token_price_usd": "1"}}]})
+        return handler(request)
+
+    book = PriceBook(60)
+    feed = GeckoTerminalFeed(book, 20, client=httpx.AsyncClient(transport=httpx.MockTransport(partial)))
+    await feed.discover()
+    with pytest.raises(RuntimeError, match="cbBTC"):
+        await feed.refresh()
+    assert book.get("ETH") == Decimal("3456.78")
+    with pytest.raises(StalePrice):
+        book.get("cbBTC")

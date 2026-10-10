@@ -127,7 +127,7 @@ async def verify(
     if user is None:
         user = User(address=row.address)
         db.add(user)
-    user.last_login_at = now
+    user.last_login_at = user.last_seen_at = now
     await db.flush()
     token = secrets.token_urlsafe(32)
     db.add(Session(token_hash=_hash(token), user_id=user.id, expires_at=now + timedelta(days=s.session_days)))
@@ -149,6 +149,10 @@ async def current_user(request: Request, db: AsyncSession = Depends(db_dep)) -> 
     user = await db.get(User, sess.user_id)
     if user is None:
         raise HTTPException(401, "not signed in")
+    now = utcnow()
+    if user.last_seen_at is None or now - user.last_seen_at > timedelta(minutes=5):  # cheap "active" tracking
+        user.last_seen_at = now
+        await db.commit()
     return user
 
 

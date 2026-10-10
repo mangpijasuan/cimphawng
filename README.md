@@ -126,7 +126,7 @@ On GitHub Pages there's no server, so the panel just says paper trading starts o
 The **System** panel on the AI tab shows live numbers from the server, all real and none personal, refreshed every 5 seconds while it's on screen:
 
 - **Server:** uptime, memory, CPU load.
-- **Community:** members, members active today, paper trades today.
+- **Community:** members, members active in the last 24 hours, paper trades today.
 - **API traffic:** requests per minute, errors and response times.
 - **Price feed:** the age of each price, plus successful and failed refreshes.
 - **Database:** ping and size.

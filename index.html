@@ -106,6 +106,8 @@
   .agebar { width: 70px; height: 5px; background: #13201f; }
   .agebar i { display: block; height: 100%; background: var(--green); }
   b.mid { color: var(--yellow); }
+  #sys-on.stale .tiles, #sys-on.stale .sys-cols { opacity: .45; }
+  #sys-age.err { color: var(--red); }
   #sys-prices .sys-row > span:first-child { text-transform: none; font-size: 11px; color: var(--text); }
   .sys-err { color: var(--red); font-size: 10px; word-break: break-word; margin-top: 4px; }
   .pp-cols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
@@ -512,7 +514,7 @@
           <div id="sys-server"></div>
         </div>
       </div>
-      <div class="muted dex-note">Every number here is real and comes from the server.</div>
+      <div class="muted dex-note"><span id="sys-age"></span> · <span>Every number here is real and comes from the server.</span></div>
     </div>
   </section>
 
@@ -659,7 +661,11 @@
     'SERVER': 'SERVER',
     'Every number here is real and comes from the server.': 'Hih mun a nambat khempeuh taktak ahi a, server panin hong pai hi.',
     'Members': 'Member te',
-    'Active today': 'Tuni a hong',
+    'Active (24h)': 'A hong (nai 24)',
+    'STATS ERROR': 'STATS SIA',
+    'DB error': 'DB sia',
+    'Could not load the stats. Retrying…': 'Stats la theih lo hi. Ki-zom kik lai…',
+    'Could not refresh. Showing numbers from {t}.': 'Thak theih lo hi. {t} a nambat te lak hi.',
     'Paper trades today': 'Tuni kimawlna lei-zuak',
     'Requests this minute': 'Tu minit sung request',
     'Refreshes': 'Kithakna',
@@ -1611,29 +1617,56 @@
   }
 
   // ---------- system monitor (real numbers from /api/stats) ----------
-  const SYS = { data: null, ok: false, last: 0 };
+  // state: 'loading' (nothing yet) | 'live' | 'error' (stats request failed while the server answers health checks)
+  const SYS = { data: null, state: 'loading', at: 0, inflight: false, onScreen: true, healthAt: 0 };
+  if ('IntersectionObserver' in window) {  // only poll while the panel is actually on screen
+    new IntersectionObserver(es => { SYS.onScreen = es[0].isIntersecting; if (SYS.onScreen) sysPoll(); })
+      .observe($('sys'));
+  }
   async function sysPoll() {
-    if (!P.online || document.hidden || !shown('sys-status')) return;
-    try { SYS.data = await api('/stats'); SYS.ok = true; } catch (e) { SYS.ok = false; }
-    SYS.last = Date.now();
-    renderSys();
+    if (document.hidden || !shown('sys-status') || !SYS.onScreen || SYS.inflight) return;
+    SYS.inflight = true;  // one request at a time, so an older answer can never replace a newer one
+    try {
+      if (!P.online) {  // notice when the server comes back, at most every 30s
+        if (Date.now() - SYS.healthAt < 30000) return;
+        SYS.healthAt = Date.now();
+        await ppInit();
+        if (!P.online) return;
+      }
+      try {
+        SYS.data = await api('/stats');
+        Object.assign(SYS, { state: 'live', at: Date.now() });
+      } catch (e) {
+        SYS.state = 'error';  // keep the old numbers but mark them as old
+      }
+    } finally {
+      SYS.inflight = false;
+      renderSys();
+    }
   }
   const fmtDur = s => s >= 86400 ? Math.floor(s / 86400) + 'd ' + Math.floor(s % 86400 / 3600) + 'h'
     : s >= 3600 ? Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
   function renderSys() {
     $('sys-off').hidden = P.online;
-    $('sys-on').hidden = !P.online || !SYS.data;
+    $('sys-on').hidden = !P.online || (!SYS.data && SYS.state !== 'error');
     const st = $('sys-status');
-    st.textContent = P.online && SYS.ok ? '● ' + tr('LIVE') : P.online && !SYS.data ? tr('loading…') : tr('OFFLINE');
-    st.classList.toggle('err', !P.online || (SYS.data && !SYS.ok));
-    const d = SYS.data;
+    st.textContent = !P.online ? tr('OFFLINE') : SYS.state === 'live' ? '● ' + tr('LIVE')
+      : SYS.state === 'error' ? tr('STATS ERROR') : tr('loading…');
+    st.classList.toggle('err', !P.online || SYS.state === 'error');
+    const d = SYS.data, age = $('sys-age');
+    age.textContent = !d ? (SYS.state === 'error' ? tr('Could not load the stats. Retrying…') : '')
+      : SYS.state === 'error' ? tr('Could not refresh. Showing numbers from {t}.', { t: new Date(SYS.at).toTimeString().slice(0, 8) })
+      : tr('Updated {t}', { t: new Date(SYS.at).toTimeString().slice(0, 8) });
+    age.classList.toggle('err', SYS.state === 'error');
+    $('sys-on').classList.toggle('stale', SYS.state === 'error');
     if (!d) return;
+    const c = d.community || {}, none = '–';
     const pm = d.api.per_minute, thisMin = pm.length ? pm[pm.length - 1].requests : 0;
     const tile = (label, value, cls = '') => `<div class="tile ${cls}"><span>${esc(tr(label))}</span><b>${esc(value)}</b></div>`;
     $('sys-tiles').innerHTML = tile('Uptime', fmtDur(d.server.uptime_s))
-      + tile('Members', d.community.members, 'good') + tile('Active today', d.community.active_24h, 'good')
-      + tile('Paper trades today', d.community.paper_trades_today) + tile('Requests this minute', thisMin)
-      + tile('DB ping', d.db.ping_ms + ' ms', d.db.ping_ms > 50 ? 'hot' : '');
+      + tile('Members', c.members ?? none, 'good') + tile('Active (24h)', c.active_24h ?? none, 'good')
+      + tile('Paper trades today', c.paper_trades_today ?? none) + tile('Requests this minute', thisMin)
+      + (d.db.ok === false ? tile('DB ping', tr('DB error'), 'hot') : tile('DB ping', d.db.ping_ms + ' ms', d.db.ping_ms > 50 ? 'hot' : ''));
     const row = (k, v) => `<div class="sys-row"><span>${esc(tr(k))}</span>${v}</div>`;
     const assets = Object.entries(d.prices.assets);
     $('sys-prices').innerHTML = (assets.length ? assets.map(([a, x]) => {
@@ -1645,8 +1678,9 @@
     const by = d.api.by_status, la = d.server.load_avg;
     $('sys-server').innerHTML = row('Memory (peak)', `<b>${d.server.memory_peak_mb} MB</b>`)
       + row('Load (1 / 5 / 15 min)', `<b>${la.map(x => x ?? '–').join(' / ')}</b><small class="muted">· ${d.server.cpus} CPU</small>`)
-      + row('Database', `<b>${esc(d.db.engine)}</b><small class="muted">· ${d.db.size_mb ?? '–'} MB</small>`)
-      + row('Responses', `<b class="up">${by['2xx']}</b><small class="muted">2xx ·</small><b class="mid">${by['4xx']}</b><small class="muted">4xx ·</small><b class="down">${by['5xx']}</b><small class="muted">5xx</small>`)
+      + row('Database', d.db.ok === false ? `<b class="down">${esc(d.db.engine)} · ${esc(d.db.error)}</b>`
+        : `<b>${esc(d.db.engine)}</b><small class="muted">· ${d.db.size_mb ?? '–'} MB</small>`)
+      + row('Responses', `<b class="up">${by['2xx']}</b><small class="muted">2xx ·</small><b>${by['3xx']}</b><small class="muted">3xx ·</small><b class="mid">${by['4xx']}</b><small class="muted">4xx ·</small><b class="down">${by['5xx']}</b><small class="muted">5xx</small>`)
       + row('Python', `<b>${esc(d.server.python)}</b>`);
     drawSys();
   }
@@ -2176,6 +2210,7 @@
       if (gen === P.gen) { P.pf = pf; renderPaper(); }  // drop it if a swap/reset/sign-out happened meanwhile
     } catch (e) { if (e.status === 401 && gen === P.gen) { Object.assign(P, { user: null, pf: null, trades: [] }); renderPaper(); } }
   }, 30000);
+  SYS.healthAt = Date.now();
   ppInit().then(() => { renderSys(); sysPoll(); });
   setInterval(sysPoll, 5000);
 

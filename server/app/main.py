@@ -65,14 +65,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Added last, so it runs first: counts every /api request, including rejected and failed ones.
     @app.middleware("http")
     async def count_requests(request: Request, call_next):
-        t0, status = time.perf_counter(), 500
+        t0, counted = time.perf_counter(), request.url.path.startswith("/api/")
         try:
             response = await call_next(request)
-            status = response.status_code
-            return response
-        finally:
-            if request.url.path.startswith("/api/"):
-                app.state.request_stats.record(status, (time.perf_counter() - t0) * 1000)
+        except Exception:  # a crash becomes a 500; a cancelled request (client gone) isn't counted at all
+            if counted:
+                app.state.request_stats.record(500, (time.perf_counter() - t0) * 1000)
+            raise
+        if counted:
+            app.state.request_stats.record(response.status_code, (time.perf_counter() - t0) * 1000)
+        return response
 
     @app.get("/api/health")
     async def health():

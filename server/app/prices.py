@@ -98,13 +98,19 @@ class GeckoTerminalFeed:
         addrs = ",".join(p for p, _ in self.pools.values())
         j = await self._json(f"{GT}/networks/base/pools/multi/{addrs}")
         by_pool = {str(p["attributes"]["address"]).lower(): p["attributes"] for p in j.get("data", [])}
+        missing = []
         for asset, (pool, is_base) in self.pools.items():
             a = by_pool.get(pool)
-            if not a:
-                continue
-            price = Decimal(a["base_token_price_usd" if is_base else "quote_token_price_usd"])
+            try:
+                price = Decimal(a["base_token_price_usd" if is_base else "quote_token_price_usd"]) if a else Decimal(0)
+            except (ArithmeticError, TypeError, ValueError):
+                price = Decimal(0)
             if price > 0:
                 self.book.set(asset, price)
+            else:
+                missing.append(asset)
+        if missing:  # the others were still updated; this counts as a failed refresh so it shows on the monitor
+            raise RuntimeError(f"no usable price for {', '.join(missing)}")
 
     async def run(self) -> None:
         backoff = self.refresh_s
