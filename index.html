@@ -97,7 +97,17 @@
   .dex a { color: var(--cyan); text-decoration: none; }
   .dex-foot { color: var(--dim); font-size: 10px; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
   .dex-note { margin-top: 8px; font-size: 10px; }
-  #paper { grid-column: 1 / -1; }
+  #paper, #sys { grid-column: 1 / -1; }
+  .sys-tiles { grid-template-columns: repeat(6, 1fr); margin-bottom: 10px; }
+  .sys-cols { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; }
+  .sys-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
+  .sys-row > span:first-child { flex: 1; color: var(--dim); text-transform: uppercase; font-size: 10px; }
+  .sys-row b { color: #fff; font-weight: 600; }
+  .agebar { width: 70px; height: 5px; background: #13201f; }
+  .agebar i { display: block; height: 100%; background: var(--green); }
+  b.mid { color: var(--yellow); }
+  #sys-prices .sys-row > span:first-child { text-transform: none; font-size: 11px; color: var(--text); }
+  .sys-err { color: var(--red); font-size: 10px; word-break: break-word; margin-top: 4px; }
   .pp-cols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
   .pp-safety { border: 1px solid #1f4a2e; background: rgba(57,255,136,.06); color: var(--text); padding: 8px 10px; margin: 10px 0; font-size: 11px; }
   .pp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -262,6 +272,9 @@
     #pp-amt { grid-area: amt; min-width: 0; width: 100%; } #pp-max { grid-area: max; } #pp-go { grid-area: go; font-size: 16px; }
     #pp-logout, #pp-reset { border: 0; border-radius: 12px; background: var(--card); padding: 8px 14px; }
     #pp-reset { margin-top: 4px; }
+    .sys-tiles { grid-template-columns: repeat(2, 1fr); }
+    .sys-cols { grid-template-columns: 1fr; }
+    .sys-row { padding: 9px 2px; font-size: 13px; }
     .pp-swap button { padding: 12px 16px; border-radius: 12px; border: 0; background: var(--card); font-weight: 600; }
     #pp-go { background: var(--mgreen); color: #0c1a11; box-shadow: 0 4px 0 #3a9d57; }
     #pp-connect { width: 100%; padding: 14px; border-radius: 14px; border: 0; background: var(--mgreen); color: #0c1a11; font-size: 15px; font-weight: 700; box-shadow: 0 4px 0 #3a9d57; }
@@ -479,6 +492,30 @@
     <canvas id="c-neural" style="height:440px"></canvas>
   </section>
 
+  <section class="panel" id="sys" data-tab="ai">
+    <h2>System <span>live numbers from the cimphawng.com server</span><em class="live" id="sys-status">…</em></h2>
+    <div id="sys-off" class="muted" hidden>The System monitor shows live numbers once cimphawng.com is running on the Hetzner server.</div>
+    <div id="sys-on" hidden>
+      <div class="tiles sys-tiles" id="sys-tiles"></div>
+      <div class="sys-cols">
+        <div>
+          <div class="muted">REQUESTS PER MINUTE · LAST 30 MIN</div>
+          <canvas id="c-sys" style="height:130px"></canvas>
+          <div class="ma-legend"><span><i style="background:var(--cyan)"></i>requests</span><span><i style="background:var(--red)"></i>errors</span><span><i style="background:var(--yellow)"></i>avg ms</span></div>
+        </div>
+        <div>
+          <div class="muted">PRICE FEED</div>
+          <div id="sys-prices"></div>
+        </div>
+        <div>
+          <div class="muted">SERVER</div>
+          <div id="sys-server"></div>
+        </div>
+      </div>
+      <div class="muted dex-note">Every number here is real and comes from the server.</div>
+    </div>
+  </section>
+
   <section class="panel" id="funnel" data-tab="cimp">
     <h2>Resolution funnel <span>vol cone to settlement</span></h2>
     <canvas id="c-funnel" style="height:190px"></canvas>
@@ -613,6 +650,25 @@
     'Bot copy-trading OFF (open trades still settle)': 'Bot zuihna tawp (a kipan sa te a bei lai ding)',
     'Wallet reset to $100.00': 'Sumbawm $100.00 ah kipan kik',
     'Reset your pretend wallet back to $100 cash and 0 CIMP?': 'Na sumbawm $100 le CIMP 0 ah kipan kik ding maw?',
+    // system monitor
+    'live numbers from the cimphawng.com server': 'cimphawng.com server panin nambat taktak',
+    'The System monitor shows live numbers once cimphawng.com is running on the Hetzner server.':
+      'cimphawng.com Hetzner server tungah a kipat ciangin System monitor in nambat taktak a lak ding hi.',
+    'REQUESTS PER MINUTE · LAST 30 MIN': 'MINIT KHAT CIANG REQUEST · MINIT 30 SUNG',
+    'PRICE FEED': 'MAN THU',
+    'SERVER': 'SERVER',
+    'Every number here is real and comes from the server.': 'Hih mun a nambat khempeuh taktak ahi a, server panin hong pai hi.',
+    'Members': 'Member te',
+    'Active today': 'Tuni a hong',
+    'Paper trades today': 'Tuni kimawlna lei-zuak',
+    'Requests this minute': 'Tu minit sung request',
+    'Refreshes': 'Kithakna',
+    'failed': 'kisia',
+    'Last error': 'A nunung pen error',
+    'Memory (peak)': 'Memory (a sang pen)',
+    'Load (1 / 5 / 15 min)': 'Load (1 / 5 / 15 minit)',
+    'Database': 'Database',
+    'Responses': 'Dawnna',
     // paper trading (server)
     'Paper trading': 'Kimawlna lei-zuak',
     'real Base prices · pretend money': 'Base a man taktak · kimawlna sum',
@@ -1554,6 +1610,69 @@
     ppQuote();
   }
 
+  // ---------- system monitor (real numbers from /api/stats) ----------
+  const SYS = { data: null, ok: false, last: 0 };
+  async function sysPoll() {
+    if (!P.online || document.hidden || !shown('sys-status')) return;
+    try { SYS.data = await api('/stats'); SYS.ok = true; } catch (e) { SYS.ok = false; }
+    SYS.last = Date.now();
+    renderSys();
+  }
+  const fmtDur = s => s >= 86400 ? Math.floor(s / 86400) + 'd ' + Math.floor(s % 86400 / 3600) + 'h'
+    : s >= 3600 ? Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  function renderSys() {
+    $('sys-off').hidden = P.online;
+    $('sys-on').hidden = !P.online || !SYS.data;
+    const st = $('sys-status');
+    st.textContent = P.online && SYS.ok ? '● ' + tr('LIVE') : P.online && !SYS.data ? tr('loading…') : tr('OFFLINE');
+    st.classList.toggle('err', !P.online || (SYS.data && !SYS.ok));
+    const d = SYS.data;
+    if (!d) return;
+    const pm = d.api.per_minute, thisMin = pm.length ? pm[pm.length - 1].requests : 0;
+    const tile = (label, value, cls = '') => `<div class="tile ${cls}"><span>${esc(tr(label))}</span><b>${esc(value)}</b></div>`;
+    $('sys-tiles').innerHTML = tile('Uptime', fmtDur(d.server.uptime_s))
+      + tile('Members', d.community.members, 'good') + tile('Active today', d.community.active_24h, 'good')
+      + tile('Paper trades today', d.community.paper_trades_today) + tile('Requests this minute', thisMin)
+      + tile('DB ping', d.db.ping_ms + ' ms', d.db.ping_ms > 50 ? 'hot' : '');
+    const row = (k, v) => `<div class="sys-row"><span>${esc(tr(k))}</span>${v}</div>`;
+    const assets = Object.entries(d.prices.assets);
+    $('sys-prices').innerHTML = (assets.length ? assets.map(([a, x]) => {
+      const pct = Math.min(1, x.age_s / d.prices.max_age_s) * 100, col = pct > 80 ? 'var(--red)' : pct > 40 ? 'var(--yellow)' : 'var(--green)';
+      return row(a, `<b>${fmtPx(+x.price_usd)}</b><span class="agebar"><i style="width:${Math.max(3, 100 - pct)}%;background:${col}"></i></span><small class="muted">${x.age_s}s</small>`);
+    }).join('') : row('PRICE FEED', `<b class="down">–</b>`))
+      + (d.prices.refresh_ok !== null ? row('Refreshes', `<b>${d.prices.refresh_ok}</b><small class="muted">· ${d.prices.refresh_failed} ${esc(tr('failed'))}</small>`) : '')
+      + (d.prices.last_error ? `<div class="sys-err">${esc(tr('Last error'))} ${esc(new Date(d.prices.last_error.at * 1000).toTimeString().slice(0, 5))}: ${esc(d.prices.last_error.error)}</div>` : '');
+    const by = d.api.by_status, la = d.server.load_avg;
+    $('sys-server').innerHTML = row('Memory (peak)', `<b>${d.server.memory_peak_mb} MB</b>`)
+      + row('Load (1 / 5 / 15 min)', `<b>${la.map(x => x ?? '–').join(' / ')}</b><small class="muted">· ${d.server.cpus} CPU</small>`)
+      + row('Database', `<b>${esc(d.db.engine)}</b><small class="muted">· ${d.db.size_mb ?? '–'} MB</small>`)
+      + row('Responses', `<b class="up">${by['2xx']}</b><small class="muted">2xx ·</small><b class="mid">${by['4xx']}</b><small class="muted">4xx ·</small><b class="down">${by['5xx']}</b><small class="muted">5xx</small>`)
+      + row('Python', `<b>${esc(d.server.python)}</b>`);
+    drawSys();
+  }
+  function drawSys() {
+    if (!shown('c-sys') || !SYS.data) return;
+    const [ctx, w, h] = fit($('c-sys'));
+    const pm = SYS.data.api.per_minute, n = pm.length, bw = (w - 40) / n;
+    const maxR = Math.max(1, ...pm.map(m => m.requests)), maxMs = Math.max(1, ...pm.map(m => m.avg_ms || 0));
+    hgrid(ctx, w - 40, h, 4);
+    pm.forEach((m, i) => {
+      const bh = m.requests / maxR * (h - 16), eh = m.errors / maxR * (h - 16);
+      ctx.fillStyle = COL.cyan; ctx.globalAlpha = 0.75; ctx.fillRect(i * bw + 1, h - 12 - bh, Math.max(1, bw - 2), bh);
+      ctx.globalAlpha = 1; ctx.fillStyle = COL.red; ctx.fillRect(i * bw + 1, h - 12 - eh, Math.max(1, bw - 2), eh);
+    });
+    ctx.beginPath(); let started = false;
+    pm.forEach((m, i) => {
+      if (m.avg_ms === null) return;
+      const x = i * bw + bw / 2, y = h - 12 - m.avg_ms / maxMs * (h - 16);
+      started ? ctx.lineTo(x, y) : ctx.moveTo(x, y); started = true;
+    });
+    ctx.strokeStyle = COL.yellow; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = COL.dim;
+    ctx.fillText(maxR + '/min', w - 38, 10); ctx.fillText(maxMs.toFixed(0) + 'ms', w - 38, 22);
+    ctx.fillText('-30m', 0, h - 1); ctx.textAlign = 'right'; ctx.fillText('now', w - 42, h - 1); ctx.textAlign = 'left';
+  }
+
   // ---------- phone tabs ----------
   const TABS = ['home', 'markets', 'cimp', 'bot', 'ai'];
   const shown = id => $(id).offsetParent !== null;  // skip drawing charts on hidden tabs
@@ -1563,7 +1682,7 @@
     document.querySelectorAll('.tabbar [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === t));
     try { localStorage.setItem('cimphawng-tab', t); } catch (e) { /* ignore */ }
     if (scroll && getComputedStyle($('tabbar')).display !== 'none') scrollTo(0, 0);
-    drawMe(); drawDex();
+    drawMe(); drawDex(); sysPoll();
   }
 
   // ---------- derived metrics ----------
@@ -2057,7 +2176,8 @@
       if (gen === P.gen) { P.pf = pf; renderPaper(); }  // drop it if a swap/reset/sign-out happened meanwhile
     } catch (e) { if (e.status === 401 && gen === P.gen) { Object.assign(P, { user: null, pf: null, trades: [] }); renderPaper(); } }
   }, 30000);
-  ppInit();
+  ppInit().then(() => { renderSys(); sysPoll(); });
+  setInterval(sysPoll, 5000);
 
   let savedTab = 'home';
   try { savedTab = localStorage.getItem('cimphawng-tab') || 'home'; } catch (e) { /* default */ }
@@ -2069,7 +2189,7 @@
   $('lang').addEventListener('click', () => {
     LANG = LANG === 'zo' ? 'en' : 'zo';
     try { localStorage.setItem('cimphawng-lang', LANG); } catch (e) { /* ignore */ }
-    applyLang(); renderMe(); renderDex(); renderPaper();
+    applyLang(); renderMe(); renderDex(); renderPaper(); renderSys();
   });
 
   let speed = 1, acc = 0, prev = performance.now(), lastSlow = 0, lastText = 0, lastCurve = 0;

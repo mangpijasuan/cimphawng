@@ -64,6 +64,9 @@ class GeckoTerminalFeed:
         self.refresh_s = refresh_s
         self.client = client or httpx.AsyncClient(timeout=12, headers={"Accept": "application/json"})
         self.pools: dict[str, tuple[str, bool]] = {}  # asset -> (pool address, token is base side)
+        self.ok = 0  # successful refreshes, for the System monitor
+        self.failed = 0
+        self.last_error: dict | None = None
 
     async def _json(self, url: str) -> dict:
         r = await self.client.get(url)
@@ -110,10 +113,13 @@ class GeckoTerminalFeed:
                 if not self.pools:
                     await self.discover()
                 await self.refresh()
+                self.ok += 1
                 backoff = self.refresh_s
             except asyncio.CancelledError:
                 raise
             except Exception as e:  # keep running: stale prices simply block swaps
+                self.failed += 1
+                self.last_error = {"at": int(time.time()), "error": f"{type(e).__name__}: {e}"[:200]}
                 backoff = min(backoff * 2, 300)
                 log.warning("price refresh failed (%s); retrying in %ss", e, backoff)
             await asyncio.sleep(backoff)

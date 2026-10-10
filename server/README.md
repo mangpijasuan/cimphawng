@@ -16,6 +16,7 @@ Part of step 3 in [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md). Deployment: [
 | POST | `/api/paper/swap` | `{from_asset, to_asset, amount}` among USDC, ETH, cbBTC at live prices, with a 0.3% fee |
 | GET | `/api/paper/trades` | Trade history, newest first |
 | POST | `/api/paper/reset` | Back to 100 USDC |
+| GET | `/api/stats` | Public System monitor numbers: uptime, memory, load, API requests per minute (30 min), responses by status, price ages and feed refresh counts, database ping and size, member and paper-trade counts. No personal data; database figures are cached for 5s |
 
 Interactive docs: `/api/docs`. Every write must be sent as `application/json`, which blocks cross-site form attacks.
 
