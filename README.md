@@ -52,7 +52,7 @@ On phones (screens up to 760px wide) the terminal turns into an app-style layout
 
 Only the open tab's charts are drawn, which saves battery. The app remembers the last tab you used. Desktop keeps the full terminal.
 
-## Perps Desk (paper only): `desk.html`
+## Perps Desk (paper-only learning lab): `desk.html`
 
 A separate page for researching a high-leverage perpetual-futures plan on BTC, ETH, SOL, AVAX and SUI, using
 Hyperliquid's free public market data. **Paper only:** the page has no exchange key or wallet and cannot place real orders.
@@ -72,6 +72,13 @@ Every 60 seconds it:
 - **Writes tickets with IDs.** Each shows entry, TP, SL, the approximate liquidation price, profit or loss on margin at TP and SL,
   and **how much of the stack it risks**. A ticket only fills (on paper) when you press **Approve**, and expires after 5 minutes.
 - **Watches open positions** every 10 seconds and closes the whole position at TP or SL.
+- **Safety guards** (the same kind as the architecture's bot guards):
+  - A **daily loss limit**: default 20%, then no new tickets until the next UTC day.
+  - A stop after **3 losses in a row**.
+  - A **kill switch** that closes every paper position at market and stops new tickets until **Resume**.
+
+It's an official Cimphawng feature (see section 8 of `docs/ARCHITECTURE.md`): a **paper-only learning lab**, linked from the
+**Bot** tab with a risk warning, in Zomi or English. A live version would be owner-only and never use members' money.
 
 The dashboard shows equity against the starting $53, open positions, a trade grid, top closes, running stats
 (win rate, fees, max drawdown, average win and loss) and a full decision log. Everything is stored in your browser.

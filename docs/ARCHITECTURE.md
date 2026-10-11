@@ -7,7 +7,7 @@ This document describes two things:
    covers real prices from **decentralized exchanges (DEXs)**, analysis, paper trading and, last of all, automated
    trading with real money. It runs on a Hetzner server at **cimphawng.com**.
 
-The target design is a **plan**, not built yet. Section 9 records what has been decided and what is still open.
+The target design is a **plan**, not built yet. Section 10 records what has been decided and what is still open.
 
 ---
 
@@ -120,7 +120,7 @@ an Ethereum layer-2:
 - **Easy to see:** block explorers and free price APIs cover it well.
 
 Solana (Jupiter, Raydium) is the main alternative. It would need a different code path and different wallets,
-so it's better added later, not first. This is still an open decision (section 9).
+so it's better added later, not first. This is still an open decision (section 10).
 
 ### 3.2 System overview
 
@@ -344,6 +344,7 @@ the wallet's real on-chain balances.
 | **3. Full stack + community** 🚧 | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member. **Part 1 done:** API with wallet sign-in and paper swaps at live prices, PostgreSQL, Caddy, Docker Compose, deploy guide, CI tests. **Part 2 done:** web app Connect-wallet button and paper-trading panel. **System monitor done:** public `/api/stats` and a System panel (AI tab) with real server, traffic, price-feed, database and community numbers. **Next:** paper bots, WalletConnect for phone wallets without an in-app browser, Alembic migrations, a separate ingestor and Redis once more services need live data | Hetzner · cimphawng.com | No |
 | **4. Member one-tap swaps** | Quotes and Zomi previews. Members sign and send swaps from **their own wallet**. Portfolio tracking from the chain | Hetzner + member wallets | Yes, the member's own, signed by them |
 | **5. Owner's automated bot** | Execution service live adapter, bot wallet, every section 5.1 guard, alerts | Hetzner | Yes, the owner's bot wallet only |
+| **Perps Desk** ✅ (paper) | `desk.html` learning lab (section 8): volatility-scaled leverage tickets, approval, guards, dashboard | Browser now; server engine later | No. Live is owner-only, after section 8.4 |
 
 > **Step 3 part 1 simplifications.** The price feed runs inside the API process, as one shared GeckoTerminal poller for
 > all members. Tables are created on start-up. Redis isn't used yet. These change when the strategy engine and bots arrive
@@ -368,7 +369,56 @@ cimphawng/
 
 ---
 
-## 8. What "DEX" changes compared with a centralized exchange
+## 8. Feature: Perps Desk (paper-only learning lab)
+
+`desk.html` is a separate page for learning how **leveraged perpetual futures** behave, using real market data and
+pretend money. It's linked from the Bot tab with a risk warning, and is not part of members' paper portfolios.
+
+### 8.1 How it fits the principles
+
+| Principle (section 1) | How the Perps Desk follows it |
+|---|---|
+| Real money comes last | **Paper only.** The page has no exchange key, wallet or order code. Live trading is a later, separate step (8.4) |
+| Non-custodial | It never holds anyone's coins. A future live mode would be **owner-only** and **never** trade members' funds |
+| Only one component can sign | Nothing can sign today. A live mode would go through the execution service and risk manager like every other order |
+| Zomi first | Zomi/English switch, sharing the main site's language choice |
+| Same safety guards as the bot (5.1) | Daily loss limit, kill switch, stop after a run of losses, per-trade and total margin limits, stale-data guard, decision log |
+
+### 8.2 Rules (from the owner's brief)
+
+- **Coins:** BTC, ETH, SOL, AVAX, SUI.
+- **Market data:** Hyperliquid's public data, a decentralized perpetuals exchange on its own chain. This is the
+  one place Cimphawng looks beyond Base, because Base has no comparable perps market for these coins.
+- **Hard rule:** leverage ≈ target return on margin ÷ expected move, where the expected move ≈ 1h ATR(14) × 2. A smaller move
+  means higher leverage. It never goes above 30x or the coin's own maximum, and prefers 26x or less.
+- **Direction:** follow the coin's short-term bias and the board's lean (shorts on a red day).
+- **Size:** 50% of equity as margin per trade, and at most 70% of equity in margin in total.
+- **Slippage:** skip if walking the order book would give more than 0.3%.
+- **Exits:** take-profit at the expected move, stop-loss at ⅓ of it. The stop must sit well inside the liquidation
+  price, otherwise leverage is lowered.
+- **Approval:** every ticket needs the user's **Approve**, and tickets expire after 5 minutes.
+
+### 8.3 Guards
+
+| Guard | Default | Effect |
+|---|---|---|
+| Daily loss limit | 20% of the day's starting equity (adjustable 5–30%) | No new tickets for the rest of the UTC day |
+| Losses in a row | 3 (adjustable 2–5) | No new tickets until the next UTC day or **Resume** |
+| Kill switch | Button | Closes every paper position at market and stops all tickets until **Resume** |
+| Margin limits | 50% per trade, 70% total | Checked when proposing **and** again when approving |
+| Stale data | Market data must load | No tickets while data is offline |
+
+### 8.4 Path to live (owner only, not built)
+
+1. Run it in paper mode for several weeks, and record whether the rule actually makes money after fees and funding.
+2. Move the logic to the server's **strategy engine** (section 3.3), so it runs 24/7 with history in PostgreSQL, behind the same
+   **risk manager**.
+3. Add a Hyperliquid **execution adapter** using a separate, small, owner-only account with an API wallet that can't withdraw.
+4. Get legal advice first: perpetual futures are restricted or unavailable in many countries, including the US.
+
+Members never get a live version. For the community it stays a paper learning lab.
+
+## 9. What "DEX" changes compared with a centralized exchange
 
 | Topic | Centralized exchange | DEX (this design) |
 |---|---|---|
@@ -381,9 +431,9 @@ cimphawng/
 
 ---
 
-## 9. Decisions
+## 10. Decisions
 
-### 9.1 Decided
+### 10.1 Decided
 
 | Decision | Choice |
 |---|---|
@@ -392,8 +442,9 @@ cimphawng/
 | Backend language | **Python** |
 | Domain | **cimphawng.com**, with cimphawng.us as an optional redirect |
 | Server | **Hetzner** |
+| Perps Desk | A **paper-only learning lab** on Hyperliquid data with the owner's leverage rule and the section 8.3 guards. Live trading is owner-only and only after section 8.4 |
 
-### 9.2 Still open
+### 10.2 Still open
 
 | Decision | Options | Recommendation |
 |---|---|---|

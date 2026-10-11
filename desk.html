@@ -14,6 +14,8 @@
   body { font: 12px/1.4 "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; padding-bottom: 40px; }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
   .brand { color: var(--cyan); font-weight: 800; }
+  a.back { color: var(--dim); text-decoration: none; } a.back:hover { color: var(--cyan); }
+  #lang { color: var(--cyan); border-color: var(--cyan); }
   .badge { border: 1px solid currentColor; padding: 1px 7px; font-size: 10px; }
   .paper { color: var(--yellow); } .err { color: var(--red); } .ok { color: var(--green); }
   .eq { margin-left: auto; text-align: right; }
@@ -48,6 +50,9 @@
   .log div { padding: 3px 0; border-bottom: 1px solid #0d1a1d; }
   .settings { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .settings input { font: inherit; width: 80px; background: #060c0f; color: #fff; border: 1px solid var(--line); padding: 3px 6px; }
+  .guard-row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  #g-state.armed { color: var(--green); } #g-state.halted { color: var(--red); }
+  button.kill { color: var(--red); border-color: var(--red); font-weight: 800; }
   .warn { border: 1px solid #5a2a14; background: rgba(255,120,40,.07); padding: 8px 10px; color: #ffcf9e; }
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
@@ -59,23 +64,35 @@
 </head>
 <body>
 <header>
+  <a class="back" href="./index.html">← Cimphawng</a>
   <div class="brand">PERPS DESK <span class="muted">· BTC ETH SOL AVAX SUI · Hyperliquid data</span></div>
   <span class="badge paper">PAPER ONLY · NO REAL ORDERS</span>
+  <button id="lang" title="Language / Pau">English</button>
   <span class="badge" id="feed">…</span>
   <div class="eq"><span class="muted">EQUITY</span><b id="eq">$–</b><span id="eq-delta"></span></div>
 </header>
 
 <main>
   <section class="panel wide warn" id="disclaimer">
-    Research + paper mode. Nothing here can place a real order: there is no exchange key or wallet in this page.
-    High leverage can wipe out the margin of a trade in a small move against you. Every ticket shows the price
-    where an exchange would liquidate it and how much of your stack it risks. Not financial advice.
+    Research + paper mode. Nothing here can place a real order: there is no exchange key or wallet in this page. High leverage can wipe out the margin of a trade in a small move against you. Every ticket shows the price where an exchange would liquidate it and how much of your stack it risks. Not financial advice.
   </section>
 
   <section class="panel wide">
     <h2>Market snapshot <span>scan every 60s · expected move ≈ 1h ATR(14) × 2 (next ~4h)</span></h2>
     <div class="scroll"><table id="snap"></table></div>
     <div class="muted" id="board" style="margin-top:6px"></div>
+  </section>
+
+  <section class="panel wide" id="guards">
+    <h2>Safety guards <span>daily loss limit · losses in a row · kill switch</span></h2>
+    <div class="guard-row">
+      <b id="g-state">…</b>
+      <span class="muted"><span>Today</span>: <b id="g-day">–</b></span>
+      <span class="muted"><span>Losses in a row</span>: <b id="g-streak">–</b></span>
+      <button class="kill" id="g-kill">Kill switch</button>
+      <button class="go" id="g-resume" hidden>Resume</button>
+    </div>
+    <div class="muted" id="g-reason"></div>
   </section>
 
   <section class="panel wide">
@@ -114,6 +131,8 @@
       <label>Starting stack $ <input id="s-start" inputmode="decimal"></label>
       <label>Target ROI on margin % <input id="s-roi" inputmode="decimal"></label>
       <label>Taker fee % <input id="s-fee" inputmode="decimal"></label>
+      <label>Daily loss limit % <input id="s-dayloss" inputmode="decimal"></label>
+      <label>Max losses in a row <input id="s-maxloss" inputmode="numeric"></label>
       <button id="s-save">Save</button>
       <button class="no" id="s-reset">Reset paper account</button>
     </div>
@@ -144,12 +163,88 @@
   const px = v => !isFinite(v) ? '–' : v >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 1 }) : v >= 1 ? v.toFixed(3) : v.toPrecision(4);
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
+  // ---------- language: Zomi first, English second (shares the main site's choice) ----------
+  const ZO = {
+    'PAPER ONLY · NO REAL ORDERS': 'KIMAWLNA BEK · LEI-ZUAK TAKTAK OM LO',
+    'Research + paper mode. Nothing here can place a real order: there is no exchange key or wallet in this page. High leverage can wipe out the margin of a trade in a small move against you. Every ticket shows the price where an exchange would liquidate it and how much of your stack it risks. Not financial advice.':
+      'Sinna le kimawlna mode. Hih mun ah lei-zuak taktak kibawl thei lo hi: exchange key ahi zongin sumbawm ahi zongin om lo hi. Leverage sang in a man tawmvei a kileh ciangin trade khat margin khempeuh a mansuahsak thei hi. Ticket khempeuh in exchange in a liquidate ding man le na stack a zah bangzah a lauhuai lak hi. Sum kizat dan thuhilhna hi lo hi.',
+    'Market snapshot': 'Market tu-a dinmun',
+    'Safety guards': 'Kidawmna',
+    'Proposed tickets': 'Ticket gen te',
+    'Open positions': 'A hong position te',
+    'Trade grid': 'Lei-zuak grid',
+    'Top closes': 'A lian pen khak te',
+    'Running stats': 'Stats',
+    'Decision log': 'Thukhenna log',
+    'Settings': 'Setting',
+    'Today': 'Tuni',
+    'Losses in a row': 'A zom mansuahna',
+    'Kill switch': 'Khawlsak vekpi',
+    'Resume': 'Kipan kik',
+    'ARMED': 'KIGING',
+    'HALTED': 'KHAWL',
+    'Starting stack $': 'A kipatna stack $',
+    'Target ROI on margin %': 'Margin tungah phattuam ngim %',
+    'Taker fee %': 'Taker man %',
+    'Daily loss limit %': 'Ni khat mansuah khawlna %',
+    'Max losses in a row': 'A zom mansuah tam pen',
+    'Save': 'Koih in',
+    'Reset paper account': 'Kimawlna account kipan kik',
+    'DATA LIVE': 'DATA TU-IN', 'DATA OFFLINE': 'DATA KIZOM LO', 'LOADING': 'KIPAN LAI',
+    'Approve {id} (paper)': '{id} pom (kimawlna)',
+    'Reject': 'Nawl',
+    'expires in {s}s': 'sekhen {s} sungah bei ding',
+    'Entry': 'Lutna', 'Take profit': 'Phattuam la', 'Stop loss': 'Mansuah khawl', 'Liquidation ≈': 'Liquidation ≈',
+    'Margin': 'Margin', 'Size': 'Zah', 'At TP': 'TP ah', 'At SL': 'SL ah',
+    'on margin': 'margin tungah', 'risks {p} of stack': 'stack a {p} lauhuai',
+    'No tickets: the desk is halted (see Safety guards).': 'Ticket om lo: desk khawl hi (Kidawmna en in).',
+    'No tickets: market data is offline.': 'Ticket om lo: market data kizom lo hi.',
+    'No ticket right now: no coin passes every rule (see the decision log).': 'Tu-in ticket om lo: dan khempeuh a zui coin om lo (log en in).',
+    'Waiting for market data…': 'Market data ngak lai…',
+    'No open positions': 'A hong position om lo',
+    'No trades yet': 'Lei-zuak om nai lo',
+    'No closed trades yet': 'A khak lei-zuak om nai lo',
+    'Win rate': 'Zawhna', 'Trades': 'Lei-zuak', 'Total fees': 'Man khempeuh', 'Max drawdown': 'Kiatna lian pen',
+    'Avg win': 'Zawhna laizang', 'Avg loss': 'Mansuahna laizang', 'Margin in use': 'Margin zat', 'Mode': 'Mode',
+    "Stops new tickets if today's loss reaches {d}% or after {n} losses in a row.":
+      'Tuni mansuahna {d}% a tun ciangin ahih kei leh a zom in {n} a mansuah ciangin ticket thak khawl ding hi.',
+    'Fee default is an assumption; set it to your exchange\'s taker fee. Funding payments are not included in paper PnL yet.':
+      'Man default pen ngaihsutna bek ahi hi; na exchange taker man tawh kibang in koih in. Funding pen kimawlna PnL ah kihel nai lo hi.',
+    'Kill switch: close every paper position at market and stop all new tickets?': 'Khawlsak vekpi: kimawlna position khempeuh market man in khak in, ticket thak khempeuh khawl ding maw?',
+    'stored in this browser only': 'hih browser bek ah koih',
+    'daily loss limit · losses in a row · kill switch': 'ni khat mansuah · a zom mansuahna · khawlsak vekpi',
+    'approve by ticket ID; expire after 5 min': 'ticket ID tawh pom in; minit 5 khit ciangin bei',
+    'green win · red loss · yellow open': 'a hing zawhna · a san mansuahna · a eng a hong lai',
+  };
+  let LANG = 'zo';
+  try { LANG = localStorage.getItem('cimphawng-lang') || 'zo'; } catch (e) { /* default Zomi */ }
+  const tr = (en, vars) => {
+    let out = (LANG === 'zo' && ZO[en]) || en;
+    if (vars) for (const k in vars) out = out.split('{' + k + '}').join(vars[k]);
+    return out;
+  };
+  const LABELS = [];
+  {
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT,
+      { acceptNode: n => (n.parentNode.nodeName !== 'SCRIPT' && ZO[n.nodeValue.trim()] ? 1 : 3) });
+    for (let n; (n = walk.nextNode());) LABELS.push({ node: n, raw: n.nodeValue, en: n.nodeValue.trim() });
+  }
+  function applyLang() {
+    for (const l of LABELS) l.node.nodeValue = l.raw.replace(l.en, tr(l.en));
+    document.documentElement.lang = LANG === 'zo' ? 'ctd' : 'en';
+    $('lang').textContent = LANG === 'zo' ? 'English' : 'Zomi';
+  }
+
   // ---------- state (browser storage) ----------
-  const fresh = start => ({ start, equityBase: start, settings: { start, roi: 100, fee: 0.05 }, positions: [], closed: [],
-                            tickets: [], log: [], nextId: 1, peak: start, maxDd: 0, fees: 0 });
+  const DEFAULT_SETTINGS = { roi: 100, fee: 0.05, dayLoss: 20, maxLosses: 3 };
+  const fresh = start => ({ start, equityBase: start, settings: { start, ...DEFAULT_SETTINGS }, positions: [], closed: [],
+                            tickets: [], log: [], nextId: 1, peak: start, maxDd: 0, fees: 0,
+                            halt: null, day: null, streakFrom: 0 });
   let S;
   try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
   if (!S || !S.settings) S = fresh(53);
+  S.settings = { ...DEFAULT_SETTINGS, ...S.settings };
+  if (S.streakFrom === undefined) Object.assign(S, { halt: null, day: null, streakFrom: 0 });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } };
   function log(msg) {
     S.log.unshift({ t: new Date().toISOString().slice(0, 19).replace('T', ' '), msg });
@@ -255,9 +350,49 @@
     return ms.length < 3 ? 'unknown' : red > green ? 'red' : 'green';
   }
 
+  // ---------- safety guards (architecture §5: daily loss limit, kill switch, loss streak) ----------
+  function lossStreak() {
+    let n = 0;
+    for (let i = S.closed.length - 1; i >= S.streakFrom && S.closed[i].pnl <= 0; i--) n++;
+    return n;
+  }
+  function halt(kind, reason) {
+    if (S.halt && S.halt.kind === 'kill' && kind !== 'kill') return;
+    S.halt = { kind, reason, at: Date.now() };
+    for (const t of S.tickets) if (t.status === 'pending') t.status = 'cancelled';
+    log(`HALT (${kind}): ${reason}. No new tickets until ${kind === 'kill' ? 'you press Resume' : 'the next UTC day or you press Resume'}.`);
+  }
+  function guardCheck() {
+    const today = new Date().toISOString().slice(0, 10), eq = equity();
+    if (!S.day || S.day.date !== today) {
+      S.day = { date: today, equity: eq };
+      if (S.halt && S.halt.kind !== 'kill') { S.halt = null; S.streakFrom = S.closed.length; log('New UTC day: daily guards reset'); }
+    }
+    if (S.halt) return;
+    const dayLoss = (S.day.equity - eq) / S.day.equity;
+    if (dayLoss >= S.settings.dayLoss / 100) halt('daily', `daily loss limit hit: down ${(dayLoss * 100).toFixed(1)}% today (limit ${S.settings.dayLoss}%)`);
+    else if (lossStreak() >= S.settings.maxLosses) halt('streak', `${lossStreak()} losses in a row (limit ${S.settings.maxLosses})`);
+  }
+  function killSwitch() {
+    for (const p of [...S.positions]) {
+      const m = M[p.coin];
+      close(p, m ? m.mark : p.entry, 'KILL');
+    }
+    halt('kill', 'kill switch pressed: all paper positions closed at market');
+    save(); render();
+  }
+  function resume() {
+    if (!S.halt) return;
+    log(`RESUME: guards re-armed (was halted: ${S.halt.reason})`);
+    S.halt = null; S.streakFrom = S.closed.length; S.day = { date: new Date().toISOString().slice(0, 10), equity: equity() };
+    save(); propose(); render();
+  }
+
   function propose() {
     S.tickets = S.tickets.filter(t => Date.now() - t.at < RULES.ticketTtlMs && t.status === 'pending');
     if (!feedOk) return;
+    guardCheck();
+    if (S.halt) { save(); return; }
     const eq = equity(), lean = boardLean();
     for (const coin of COINS) {
       const m = M[coin];
@@ -298,6 +433,7 @@
   function approve(id) {
     const t = S.tickets.find(x => x.id === id && x.status === 'pending');
     if (!t) return;
+    if (S.halt) { t.status = 'cancelled'; log(`${id} refused: desk is halted (${S.halt.reason})`); return finish(); }
     const m = M[t.coin], eq = equity();
     if (!m || Date.now() - t.at > RULES.ticketTtlMs) { t.status = 'expired'; log(`${id} expired before approval`); return finish(); }
     if ((marginUsed() + t.margin) / eq > RULES.totalMarginCap) { t.status = 'rejected'; log(`${id} rejected: margin cap`); return finish(); }
@@ -333,6 +469,7 @@
     finish();
   }
   function finish() {
+    guardCheck();
     const eq = equity();
     S.peak = Math.max(S.peak, eq);
     S.maxDd = Math.max(S.maxDd, (S.peak - eq) / S.peak);
@@ -345,7 +482,7 @@
     $('eq').textContent = usd(eq);
     $('eq-delta').innerHTML = `<span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${usd(d)}</span> <span class="muted">· ${(eq / S.start).toFixed(1)}x from ${usd(S.start, 0)}</span>`;
     const f = $('feed');
-    f.textContent = feedOk === null ? 'LOADING' : feedOk ? 'DATA LIVE' : 'DATA OFFLINE';
+    f.textContent = tr(feedOk === null ? 'LOADING' : feedOk ? 'DATA LIVE' : 'DATA OFFLINE');
     f.className = 'badge ' + (feedOk ? 'ok' : feedOk === false ? 'err' : 'muted');
 
     $('snap').innerHTML = '<tr><th>Coin</th><th>Mark</th><th>1h</th><th>4h</th><th>24h</th><th>Funding/h</th><th>OI</th><th>Exp. move</th><th>→ Lev</th><th>Bias</th><th>Max</th></tr>'
@@ -364,35 +501,35 @@
     const pending = S.tickets.filter(t => t.status === 'pending');
     $('tickets').innerHTML = pending.length ? pending.map(t => `<div class="ticket">
         <div class="t-head"><b>${t.id}</b><b class="${t.side === 'long' ? 'up' : 'down'}">${t.coin} ${t.side.toUpperCase()} ${t.lev}x</b>
-          <span class="muted">expires in ${Math.max(0, Math.round((RULES.ticketTtlMs - (Date.now() - t.at)) / 1000))}s</span>
-          <button class="go" data-approve="${t.id}">Approve ${t.id} (paper)</button><button class="no" data-reject="${t.id}">Reject</button></div>
+          <span class="muted">${tr('expires in {s}s', { s: Math.max(0, Math.round((RULES.ticketTtlMs - (Date.now() - t.at)) / 1000)) })}</span>
+          <button class="go" data-approve="${t.id}">${tr('Approve {id} (paper)', { id: t.id })}</button><button class="no" data-reject="${t.id}">${tr('Reject')}</button></div>
         <div class="nums">
-          <div><span>Entry</span>${px(t.entry)}</div><div><span>Take profit</span>${px(t.tp)}</div><div><span>Stop loss</span>${px(t.sl)}</div><div><span>Liquidation ≈</span><b class="down">${px(t.liq)}</b></div>
-          <div><span>Margin</span>${usd(t.margin)}</div><div><span>Size</span>${usd(t.notional)}</div><div><span>At TP</span><b class="up">${pct(t.roiTp, 0)}</b> on margin</div><div><span>At SL</span><b class="down">${pct(t.roiSl, 0)}</b> · risks ${pct(t.riskOfEquity, 1).replace('+', '')} of stack</div>
+          <div><span>${tr('Entry')}</span>${px(t.entry)}</div><div><span>${tr('Take profit')}</span>${px(t.tp)}</div><div><span>${tr('Stop loss')}</span>${px(t.sl)}</div><div><span>${tr('Liquidation ≈')}</span><b class="down">${px(t.liq)}</b></div>
+          <div><span>${tr('Margin')}</span>${usd(t.margin)}</div><div><span>${tr('Size')}</span>${usd(t.notional)}</div><div><span>${tr('At TP')}</span><b class="up">${pct(t.roiTp, 0)}</b> ${tr('on margin')}</div><div><span>${tr('At SL')}</span><b class="down">${pct(t.roiSl, 0)}</b> · ${tr('risks {p} of stack', { p: pct(t.riskOfEquity, 1).replace('+', '') })}</div>
         </div>
         <div class="why">${esc(t.why)}</div></div>`).join('')
-      : `<div class="muted">${feedOk === false ? 'No tickets: market data is offline.' : 'No ticket right now: no coin passes every rule (see the decision log).'}</div>`;
+      : `<div class="muted">${tr(S.halt ? 'No tickets: the desk is halted (see Safety guards).' : feedOk === false ? 'No tickets: market data is offline.' : 'No ticket right now: no coin passes every rule (see the decision log).')}</div>`;
 
     $('open').innerHTML = '<tr><th>Ticket</th><th>Coin</th><th>Side</th><th>Lev</th><th>Entry</th><th>Mark</th><th>TP</th><th>SL</th><th>uPnL</th><th>% margin</th></tr>'
       + (S.positions.length ? S.positions.map(p => {
         const u = unrealised(p), m = M[p.coin];
         return `<tr><td>${p.id}</td><td>${p.coin}</td><td class="${p.side === 'long' ? 'up' : 'down'}">${p.side}</td><td>${p.lev}x</td><td>${px(p.entry)}</td>
           <td>${m ? px(m.mark) : '–'}</td><td>${px(p.tp)}</td><td>${px(p.sl)}</td><td class="${u >= 0 ? 'up' : 'down'}">${usd(u)}</td><td class="${u >= 0 ? 'up' : 'down'}">${pct(u / p.margin, 1)}</td></tr>`;
-      }).join('') : '<tr><td colspan="10" class="muted">No open positions</td></tr>');
+      }).join('') : `<tr><td colspan="10" class="muted">${tr('No open positions')}</td></tr>`);
 
     const cells = S.closed.slice(-60).map(c => `<div class="cell ${c.pnl >= 0 ? 'w' : 'l'}" title="${c.id} ${c.coin} ${usd(c.pnl)}">${c.coin[0]}</div>`)
       .concat(S.positions.map(p => `<div class="cell o" title="${p.id} ${p.coin} open">${p.coin[0]}</div>`));
-    $('grid').innerHTML = cells.join('') || '<span class="muted">No trades yet</span>';
+    $('grid').innerHTML = cells.join('') || `<span class="muted">${tr('No trades yet')}</span>`;
 
     const top = [...S.closed].sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl)).slice(0, 8);
     $('top').innerHTML = '<tr><th>Coin</th><th>Side</th><th>Lev</th><th>PnL</th><th>ROI</th></tr>' + (top.length ? top.map(c =>
       `<tr><td>${c.coin}</td><td>${c.side}</td><td>${c.lev}x</td><td class="${c.pnl >= 0 ? 'up' : 'down'}">${usd(c.pnl)}</td><td class="${c.pnl >= 0 ? 'up' : 'down'}">${pct(c.roi, 0)}</td></tr>`).join('')
-      : '<tr><td colspan="5" class="muted">No closed trades yet</td></tr>');
+      : `<tr><td colspan="5" class="muted">${tr('No closed trades yet')}</td></tr>`);
 
     const wins = S.closed.filter(c => c.pnl > 0).length, n = S.closed.length;
     const avgW = wins ? S.closed.filter(c => c.pnl > 0).reduce((s, c) => s + c.pnl, 0) / wins : 0;
     const avgL = n - wins ? S.closed.filter(c => c.pnl <= 0).reduce((s, c) => s + c.pnl, 0) / (n - wins) : 0;
-    const stat = (k, v, cls = '') => `<div class="stat"><span>${k}</span><b class="${cls}">${v}</b></div>`;
+    const stat = (k, v, cls = '') => `<div class="stat"><span>${tr(k)}</span><b class="${cls}">${v}</b></div>`;
     $('stats').innerHTML = stat('Win rate', n ? Math.round(wins / n * 100) + '%' : '–') + stat('Trades', n + (S.positions.length ? ` (+${S.positions.length} open)` : ''))
       + stat('Total fees', usd(S.fees)) + stat('Max drawdown', S.maxDd > 0 ? pct(-S.maxDd, 1) : '0.0%', S.maxDd > 0 ? 'down' : '')
       + stat('Avg win', usd(avgW), 'up') + stat('Avg loss', usd(avgL), 'down') + stat('Margin in use', pct(marginUsed() / Math.max(equity(), 1e-9), 0).replace('+', ''))
@@ -400,6 +537,16 @@
 
     $('log').innerHTML = S.log.slice(0, 120).map(l => `<div><span class="muted">${esc(l.t)}</span> ${esc(l.msg)}</div>`).join('') || '<div class="muted">Nothing yet</div>';
     $('s-start').value = S.settings.start; $('s-roi').value = S.settings.roi; $('s-fee').value = S.settings.fee;
+    $('s-dayloss').value = S.settings.dayLoss; $('s-maxloss').value = S.settings.maxLosses;
+    const gs = $('g-state');
+    gs.textContent = tr(S.halt ? 'HALTED' : 'ARMED');
+    gs.className = S.halt ? 'halted' : 'armed';
+    const dayPnl = S.day ? equity() / S.day.equity - 1 : 0;
+    $('g-day').textContent = S.day ? pct(dayPnl, 1) : '–';
+    $('g-day').className = dayPnl >= 0 ? 'up' : 'down';
+    $('g-streak').textContent = `${lossStreak()} / ${S.settings.maxLosses}`;
+    $('g-reason').textContent = S.halt ? S.halt.reason : tr("Stops new tickets if today's loss reaches {d}% or after {n} losses in a row.", { d: S.settings.dayLoss, n: S.settings.maxLosses });
+    $('g-resume').hidden = !S.halt;
   }
 
   document.addEventListener('click', e => {
@@ -410,15 +557,25 @@
   $('s-save').addEventListener('click', () => {
     const roi = clamp(+$('s-roi').value || 100, 30, 150), fee = clamp(+$('s-fee').value || 0.05, 0, 1);
     S.settings.roi = roi; S.settings.fee = fee;
+    S.settings.dayLoss = clamp(+$('s-dayloss').value || 20, 5, 30);
+    S.settings.maxLosses = clamp(Math.round(+$('s-maxloss').value || 3), 2, 5);
     log(`Settings: target ROI ${roi}%, taker fee ${fee}%`);
     render();
   });
+  $('g-kill').addEventListener('click', () => { if (confirm(tr('Kill switch: close every paper position at market and stop all new tickets?'))) killSwitch(); });
+  $('lang').addEventListener('click', () => {
+    LANG = LANG === 'zo' ? 'en' : 'zo';
+    try { localStorage.setItem('cimphawng-lang', LANG); } catch (e) { /* ignore */ }
+    applyLang(); render();
+  });
+  $('g-resume').addEventListener('click', resume);
   $('s-reset').addEventListener('click', () => {
     const start = +$('s-start').value > 0 ? +$('s-start').value : 53;
     if (!confirm(`Reset the paper account to ${usd(start)}? Closed trades and the log are cleared.`)) return;
     S = fresh(start); log(`Paper account reset to ${usd(start)}`); render();
   });
 
+  applyLang();
   render();
   scan();
   setInterval(() => { if (!document.hidden) scan(); }, 60000);
@@ -432,7 +589,7 @@
       monitor(); render();
     } catch (e) { /* the next full scan reports problems */ }
   }, 10000);
-  window.__desk = { M, S: () => S, scan, approve, monitor, render };  // for tests
+  window.__desk = { M, S: () => S, scan, approve, monitor, render, killSwitch, resume };  // for tests
 })();
 </script>
 </body>
