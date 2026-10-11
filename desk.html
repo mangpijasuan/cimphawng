@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perps Desk</title>
+<meta name="description" content="Paper-only perpetual futures desk: volatility-scaled leverage, tickets that need approval, live dashboard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#04070a; --panel:#080e12; --line:#16262b; --dim:#5b777d; --text:#c3dadd; --green:#39ff88; --red:#ff3b5c; --yellow:#ffd23f; --cyan:#3fd8ff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 12px/1.4 "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; padding-bottom: 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .brand { color: var(--cyan); font-weight: 800; }
+  a.back { color: var(--dim); text-decoration: none; } a.back:hover { color: var(--cyan); }
+  #lang { color: var(--cyan); border-color: var(--cyan); }
+  .badge { border: 1px solid currentColor; padding: 1px 7px; font-size: 10px; }
+  .paper { color: var(--yellow); } .err { color: var(--red); } .ok { color: var(--green); }
+  .eq { margin-left: auto; text-align: right; }
+  .eq b { display: block; font-size: 26px; color: #fff; }
+  .up { color: var(--green); } .down { color: var(--red); } .muted { color: var(--dim); }
+  main { display: grid; gap: 10px; padding: 10px; grid-template-columns: 1fr 1fr; }
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 10px; min-width: 0; }
+  .wide { grid-column: 1 / -1; }
+  h2 { margin: 0 0 8px; font-size: 11px; color: #e7f4f5; text-transform: uppercase; display: flex; gap: 8px; align-items: center; }
+  h2::before { content: "◆"; color: var(--cyan); font-size: 8px; }
+  h2 span { color: var(--dim); font-weight: 400; text-transform: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: right; color: var(--dim); font-weight: 400; font-size: 10px; padding: 3px 5px; border-bottom: 1px solid var(--line); }
+  td { text-align: right; padding: 4px 5px; border-bottom: 1px solid #0d1a1d; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  .scroll { overflow-x: auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, 22px); gap: 4px; }
+  .grid > span { grid-column: 1 / -1; }
+  .cell { width: 22px; height: 22px; display: grid; place-items: center; font-size: 9px; color: #021; font-weight: 800; }
+  .cell.w { background: var(--green); } .cell.l { background: var(--red); } .cell.o { background: var(--yellow); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat span { display: block; color: var(--dim); font-size: 10px; text-transform: uppercase; }
+  .stat b { font-size: 16px; color: #fff; }
+  .ticket { border: 1px solid var(--line); padding: 8px; margin-bottom: 8px; }
+  .ticket .t-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ticket .why { color: var(--dim); margin-top: 4px; }
+  .ticket .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-top: 6px; }
+  .ticket .nums span { color: var(--dim); font-size: 10px; display: block; }
+  button { font: inherit; cursor: pointer; background: transparent; color: var(--yellow); border: 1px solid var(--yellow); padding: 3px 10px; }
+  button.go { color: var(--green); border-color: var(--green); } button.no { color: var(--dim); border-color: var(--dim); }
+  .log { max-height: 260px; overflow-y: auto; font-size: 10.5px; }
+  .log div { padding: 3px 0; border-bottom: 1px solid #0d1a1d; }
+  .settings { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .settings input { font: inherit; width: 80px; background: #060c0f; color: #fff; border: 1px solid var(--line); padding: 3px 6px; }
+  .guard-row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  #g-state.armed { color: var(--green); } #g-state.halted { color: var(--red); }
+  button.kill { color: var(--red); border-color: var(--red); font-weight: 800; }
+  .warn { border: 1px solid #5a2a14; background: rgba(255,120,40,.07); padding: 8px 10px; color: #ffcf9e; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .ticket .nums { grid-template-columns: repeat(2, 1fr); }
+    .eq { margin-left: 0; text-align: left; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./index.html">← Cimphawng</a>
+  <div class="brand">PERPS DESK <span class="muted">· BTC ETH SOL AVAX SUI · Hyperliquid data</span></div>
+  <span class="badge paper">PAPER ONLY · NO REAL ORDERS</span>
+  <button id="lang" title="Language / Pau">English</button>
+  <span class="badge" id="feed">…</span>
+  <span class="badge err" id="savewarn" hidden>Couldn't save in this browser: changes may be lost on reload</span>
+  <div class="eq"><span class="muted">EQUITY</span><b id="eq">$–</b><span id="eq-delta"></span></div>
+</header>
+
+<main>
+  <section class="panel wide warn" id="disclaimer">
+    Research + paper mode. Nothing here can place a real order: there is no exchange key or wallet in this page. High leverage can wipe out the margin of a trade in a small move against you. Every ticket shows the price where an exchange would liquidate it and how much of your stack it risks. Not financial advice.
+  </section>
+
+  <section class="panel wide">
+    <h2>Market snapshot <span>scan every 60s · expected move ≈ 1h ATR(14) × 2 (next ~4h)</span></h2>
+    <div class="scroll"><table id="snap"></table></div>
+    <div class="muted" id="board" style="margin-top:6px"></div>
+  </section>
+
+  <section class="panel wide" id="guards">
+    <h2>Safety guards <span>daily loss limit · losses in a row · kill switch</span></h2>
+    <div class="guard-row">
+      <b id="g-state">…</b>
+      <span class="muted"><span>Today</span>: <b id="g-day">–</b></span>
+      <span class="muted"><span>Losses in a row</span>: <b id="g-streak">–</b></span>
+      <button class="kill" id="g-kill">Kill switch</button>
+      <button class="go" id="g-resume" hidden>Resume</button>
+    </div>
+    <div class="muted" id="g-reason"></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>Proposed tickets <span>approve by ticket ID; expire after 5 min</span></h2>
+    <div id="tickets"><div class="muted">Waiting for market data…</div></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>Open positions</h2>
+    <div class="scroll"><table id="open"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Trade grid <span>green win · red loss · yellow open</span></h2>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Top closes</h2>
+    <div class="scroll"><table id="top"></table></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>Running stats</h2>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>Decision log</h2>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>Settings <span>stored in this browser only</span></h2>
+    <div class="settings">
+      <label>Starting stack $ <input id="s-start" inputmode="decimal"></label>
+      <label>Target ROI on margin % <input id="s-roi" inputmode="decimal"></label>
+      <label>Taker fee % <input id="s-fee" inputmode="decimal"></label>
+      <label>Daily loss limit % <input id="s-dayloss" inputmode="decimal"></label>
+      <label>Max losses in a row <input id="s-maxloss" inputmode="numeric"></label>
+      <button id="s-save">Save</button>
+      <button class="no" id="s-reset">Reset paper account</button>
+    </div>
+    <div class="muted" style="margin-top:6px">Fee default is an assumption; set it to your exchange's taker fee. Funding payments are not included in paper PnL yet.</div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const API = 'https://api.hyperliquid.xyz/info';
+  const COINS = ['BTC', 'ETH', 'SOL', 'AVAX', 'SUI'];
+  const KEY = 'perps-desk-v1';
+  // Fixed rules (from the desk brief). Only the stack, target ROI and fee are user settings.
+  const RULES = {
+    hardCap: 30, preferMax: 26, minLev: 3,     // never above 30x; prefer up to 26x
+    marginMin: 0.40, marginMax: 0.60, marginPick: 0.50,
+    totalMarginCap: 0.70,                      // never above 70% of equity in margin
+    maxSlippage: 0.003,                        // skip if slippage would exceed 0.3%
+    slFraction: 1 / 3,                         // stop at 1/3 of the expected move: losses ~1/3 of wins
+    liqBuffer: 0.6,                            // stop must sit within 60% of the distance to liquidation
+    ticketTtlMs: 5 * 60e3,
+  };
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const usd = (v, dp = 2) => (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(dp);
+  const pct = (v, dp = 2) => (v >= 0 ? '+' : '') + (v * 100).toFixed(dp) + '%';
+  const px = v => !isFinite(v) ? '–' : v >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 1 }) : v >= 1 ? v.toFixed(3) : v.toPrecision(4);
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  // ---------- language: Zomi first, English second (shares the main site's choice) ----------
+  const ZO = {
+    'PAPER ONLY · NO REAL ORDERS': 'KIMAWLNA BEK · LEI-ZUAK TAKTAK OM LO',
+    'Research + paper mode. Nothing here can place a real order: there is no exchange key or wallet in this page. High leverage can wipe out the margin of a trade in a small move against you. Every ticket shows the price where an exchange would liquidate it and how much of your stack it risks. Not financial advice.':
+      'Sinna le kimawlna mode. Hih mun ah lei-zuak taktak kibawl thei lo hi: exchange key ahi zongin sumbawm ahi zongin om lo hi. Leverage sang in a man tawmvei a kileh ciangin trade khat margin khempeuh a mansuahsak thei hi. Ticket khempeuh in exchange in a liquidate ding man le na stack a zah bangzah a lauhuai lak hi. Sum kizat dan thuhilhna hi lo hi.',
+    'Market snapshot': 'Market tu-a dinmun',
+    'Safety guards': 'Kidawmna',
+    'Proposed tickets': 'Ticket gen te',
+    'Open positions': 'A hong position te',
+    'Trade grid': 'Lei-zuak grid',
+    'Top closes': 'A lian pen khak te',
+    'Running stats': 'Stats',
+    'Decision log': 'Thukhenna log',
+    'Settings': 'Setting',
+    'Today': 'Tuni',
+    'Losses in a row': 'A zom mansuahna',
+    'Kill switch': 'Khawlsak vekpi',
+    'Resume': 'Kipan kik',
+    'ARMED': 'KIGING',
+    'HALTED': 'KHAWL',
+    'Starting stack $': 'A kipatna stack $',
+    'Target ROI on margin %': 'Margin tungah phattuam ngim %',
+    'Taker fee %': 'Taker man %',
+    'Daily loss limit %': 'Ni khat mansuah khawlna %',
+    'Max losses in a row': 'A zom mansuah tam pen',
+    'Save': 'Koih in',
+    'Reset paper account': 'Kimawlna account kipan kik',
+    'DATA LIVE': 'DATA TU-IN', 'DATA OFFLINE': 'DATA KIZOM LO', 'LOADING': 'KIPAN LAI', 'DATA STALE': 'DATA LUI',
+    "Couldn't save in this browser: changes may be lost on reload": 'Hih browser ah koih theih lo: reload ciangin a kikhel te mang thei hi',
+    'Approve {id} (paper)': '{id} pom (kimawlna)',
+    'Reject': 'Nawl',
+    'expires in {s}s': 'sekhen {s} sungah bei ding',
+    'Entry': 'Lutna', 'Take profit': 'Phattuam la', 'Stop loss': 'Mansuah khawl', 'Liquidation ≈': 'Liquidation ≈',
+    'Margin': 'Margin', 'Size': 'Zah', 'At TP': 'TP ah', 'At SL': 'SL ah',
+    'on margin': 'margin tungah', 'risks {p} of stack': 'stack a {p} lauhuai',
+    'No tickets: the desk is halted (see Safety guards).': 'Ticket om lo: desk khawl hi (Kidawmna en in).',
+    'No tickets: market data is offline.': 'Ticket om lo: market data kizom lo hi.',
+    'No ticket right now: no coin passes every rule (see the decision log).': 'Tu-in ticket om lo: dan khempeuh a zui coin om lo (log en in).',
+    'Waiting for market data…': 'Market data ngak lai…',
+    'No open positions': 'A hong position om lo',
+    'No trades yet': 'Lei-zuak om nai lo',
+    'No closed trades yet': 'A khak lei-zuak om nai lo',
+    'Win rate': 'Zawhna', 'Trades': 'Lei-zuak', 'Total fees': 'Man khempeuh', 'Max drawdown': 'Kiatna lian pen',
+    'Avg win': 'Zawhna laizang', 'Avg loss': 'Mansuahna laizang', 'Margin in use': 'Margin zat', 'Mode': 'Mode',
+    "Stops new tickets if today's loss reaches {d}% or after {n} losses in a row.":
+      'Tuni mansuahna {d}% a tun ciangin ahih kei leh a zom in {n} a mansuah ciangin ticket thak khawl ding hi.',
+    'Fee default is an assumption; set it to your exchange\'s taker fee. Funding payments are not included in paper PnL yet.':
+      'Man default pen ngaihsutna bek ahi hi; na exchange taker man tawh kibang in koih in. Funding pen kimawlna PnL ah kihel nai lo hi.',
+    'Kill switch: close every paper position at market and stop all new tickets?': 'Khawlsak vekpi: kimawlna position khempeuh market man in khak in, ticket thak khempeuh khawl ding maw?',
+    'stored in this browser only': 'hih browser bek ah koih',
+    'daily loss limit · losses in a row · kill switch': 'ni khat mansuah · a zom mansuahna · khawlsak vekpi',
+    'approve by ticket ID; expire after 5 min': 'ticket ID tawh pom in; minit 5 khit ciangin bei',
+    'green win · red loss · yellow open': 'a hing zawhna · a san mansuahna · a eng a hong lai',
+  };
+  let LANG = 'zo';
+  try { LANG = localStorage.getItem('cimphawng-lang') || 'zo'; } catch (e) { /* default Zomi */ }
+  const tr = (en, vars) => {
+    let out = (LANG === 'zo' && ZO[en]) || en;
+    if (vars) for (const k in vars) out = out.split('{' + k + '}').join(vars[k]);
+    return out;
+  };
+  const LABELS = [];
+  {
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT,
+      { acceptNode: n => (n.parentNode.nodeName !== 'SCRIPT' && ZO[n.nodeValue.trim()] ? 1 : 3) });
+    for (let n; (n = walk.nextNode());) LABELS.push({ node: n, raw: n.nodeValue, en: n.nodeValue.trim() });
+  }
+  function applyLang() {
+    for (const l of LABELS) l.node.nodeValue = l.raw.replace(l.en, tr(l.en));
+    document.documentElement.lang = LANG === 'zo' ? 'ctd' : 'en';
+    $('lang').textContent = LANG === 'zo' ? 'English' : 'Zomi';
+  }
+
+  // ---------- state (browser storage) ----------
+  const DEFAULT_SETTINGS = { roi: 100, fee: 0.05, dayLoss: 20, maxLosses: 3 };
+  const fresh = start => ({ start, equityBase: start, settings: { start, ...DEFAULT_SETTINGS }, positions: [], closed: [],
+                            tickets: [], log: [], nextId: 1, peak: start, maxDd: 0, fees: 0,
+                            halt: null, day: null, streakFrom: 0 });
+  let S;
+  try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
+  if (!S || !S.settings) S = fresh(53);
+  S.settings = { ...DEFAULT_SETTINGS, ...S.settings };
+  if (S.streakFrom === undefined) Object.assign(S, { halt: null, day: null, streakFrom: 0 });
+  let saveFailed = false;
+  const save = () => {
+    S.rev = (S.rev || 0) + 1;
+    if (S.closed.length > 1000) S.closed = S.closed.slice(-1000);  // keep storage small; stats cover the last 1000 trades
+    try { localStorage.setItem(KEY, JSON.stringify(S)); saveFailed = false; }
+    catch (e) { saveFailed = true; }  // shown as a warning in the header
+  };
+  // Another tab changed the account: adopt its newer state before doing anything else.
+  function sync() {
+    try {
+      const other = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (other && other.settings && (other.rev || 0) > (S.rev || 0)) { S = other; S.settings = { ...DEFAULT_SETTINGS, ...S.settings }; return true; }
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+  addEventListener('storage', e => { if (e.key === KEY && sync()) render(); });
+  function log(msg) {
+    S.log.unshift({ t: new Date().toISOString().slice(0, 19).replace('T', ' '), msg });
+    S.log = S.log.slice(0, 300);
+    save();
+  }
+
+  // ---------- market data (Hyperliquid public info API) ----------
+  const M = {};  // coin -> market snapshot
+  let feedOk = null, lastScan = 0;
+  const lastSkip = {};  // only log a skip when its reason changes
+  async function info(body) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  }
+  // >>> desk math (pure functions)
+  function atr(candles, n = 14) {
+    if (candles.length < n + 1) return NaN;
+    const trs = [];
+    for (let i = 1; i < candles.length; i++) {
+      const c = candles[i], p = candles[i - 1].c;
+      trs.push(Math.max(c.h - c.l, Math.abs(c.h - p), Math.abs(c.l - p)));
+    }
+    let a = trs.slice(0, n).reduce((s, x) => s + x, 0) / n;
+    for (let i = n; i < trs.length; i++) a = (a * (n - 1) + trs[i]) / n;  // Wilder smoothing
+    return a;
+  }
+  function ema(xs, n) {
+    const k = 2 / (n + 1);
+    return xs.reduce((e, x, i) => (i === 0 ? x : x * k + e * (1 - k)), 0);
+  }
+  // Average fill vs mid for a market order of `notional` USD walking one side of the book.
+  function slippage(levels, notional, mid) {
+    let left = notional, cost = 0, qty = 0;
+    for (const l of levels) {
+      const p = +l.px, s = +l.sz, take = Math.min(left, p * s);
+      cost += take; qty += take / p; left -= take;
+      if (left <= 1e-9) break;
+    }
+    if (left > 1e-9 || !qty) return Infinity;  // book too thin
+    return Math.abs(cost / qty - mid) / mid;
+  }
+  // The hard rule: lower expected move -> higher leverage, so TP at the expected move ~ target ROI on margin.
+  function leverageFor(expMove, targetRoi, coinMax) {
+    const raw = targetRoi / expMove;
+    return clamp(Math.round(raw), RULES.minLev, Math.min(RULES.hardCap, RULES.preferMax, coinMax || RULES.hardCap));
+  }
+  // Approximate distance to liquidation for isolated margin: 1/lev minus maintenance (half of 1/maxLev).
+  function liqDistance(lev, coinMax) { return 1 / lev - 1 / (2 * (coinMax || RULES.hardCap)); }
+  // <<< desk math
+
+  let scanning = false, markStale = false;
+  // Apply mark prices from one metaAndAssetCtxs response, unless a newer update already arrived.
+  function applyMarks(meta, ctxs, startedAt) {
+    for (const coin of COINS) {
+      const i = meta.universe.findIndex(u => u.name === coin);
+      if (i < 0) { delete M[coin]; continue; }  // market no longer listed: drop its old snapshot
+      const m = M[coin], c = ctxs[i];
+      if (!m || startedAt < m.markAt) continue;
+      Object.assign(m, { mark: +c.markPx, mid: +(c.midPx || c.markPx), funding: +c.funding, markAt: startedAt });
+    }
+  }
+  // Fresh exchange mark prices (not mids) for valuing positions and checking TP/SL/liquidation.
+  async function refreshMarks() {
+    const startedAt = Date.now();
+    try {
+      const [meta, ctxs] = await info({ type: 'metaAndAssetCtxs' });
+      applyMarks(meta, ctxs, startedAt);
+      if (markStale) log('Mark prices are updating again');
+      markStale = false;
+      return true;
+    } catch (e) {
+      if (!markStale) log(`Mark price refresh failed (${e.message}); open positions are being checked on old prices`);
+      markStale = true;
+      return false;
+    }
+  }
+  const marksFresh = (coin, maxAgeMs) => M[coin] && Date.now() - M[coin].markAt < maxAgeMs;
+
+  async function scan() {
+    if (scanning) return;  // one scan at a time, so an older one can't overwrite a newer one
+    scanning = true;
+    lastScan = Date.now();
+    try {
+      const startedAt = Date.now();
+      const [meta, ctxs] = await info({ type: 'metaAndAssetCtxs' });
+      const now = Date.now();
+      for (const coin of COINS) {
+        const i = meta.universe.findIndex(u => u.name === coin);
+        if (i < 0) { if (M[coin]) log(`${coin} is no longer listed; dropped from the scan`); delete M[coin]; continue; }
+        const u = meta.universe[i], c = ctxs[i];
+        const [candles, book] = await Promise.all([
+          info({ type: 'candleSnapshot', req: { coin, interval: '1h', startTime: now - 60 * 3600e3, endTime: now } }),
+          info({ type: 'l2Book', coin }),
+        ]);
+        const cs = candles.map(k => ({ t: +k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c }));
+        const mark = +c.markPx, mid = +(c.midPx || c.markPx), last = cs.length ? cs[cs.length - 1].c : mark;
+        const chg = h => (cs.length > h ? last / cs[cs.length - 1 - h].c - 1 : NaN);
+        const a = atr(cs), expMove = a / mark * 2;  // ~4h expected move from 1h ATR (sqrt of 4 hours)
+        const closes = cs.map(k => k.c), e20 = ema(closes.slice(-40), 20);
+        const prev = M[coin];
+        if (prev && prev.markAt > startedAt) { Object.assign(prev, { maxLev: +u.maxLeverage || RULES.hardCap, expMove, bids: book.levels[0], asks: book.levels[1], at: now }); continue; }
+        M[coin] = {
+          coin, mark, mid, maxLev: +u.maxLeverage || RULES.hardCap, funding: +c.funding, oi: +c.openInterest * mark,
+          dayChg: mark / +c.prevDayPx - 1, chg1h: chg(1), chg4h: chg(4), expMove, vol24: +c.dayNtlVlm,
+          bias: mark > e20 && chg(4) > 0 ? 'long' : mark < e20 && chg(4) < 0 ? 'short' : 'mixed',
+          bids: book.levels[0], asks: book.levels[1], at: now, markAt: startedAt,
+        };
+      }
+      feedOk = true; markStale = false;
+    } catch (e) {
+      feedOk = false;
+      log('Market data unavailable (' + e.message + '). No tickets until it returns.');
+    } finally {
+      scanning = false;
+    }
+    propose();
+    render();
+  }
+
+  function equity() {
+    const upnl = S.positions.reduce((s, p) => s + unrealised(p), 0);
+    return S.equityBase + upnl;
+  }
+  function marginUsed() { return S.positions.reduce((s, p) => s + p.margin, 0); }
+  function unrealised(p) {
+    const m = M[p.coin]; if (!m) return 0;
+    return (p.side === 'long' ? m.mark - p.entry : p.entry - m.mark) * p.qty;
+  }
+
+  function boardLean() {
+    const ms = COINS.map(c => M[c]).filter(Boolean);
+    const red = ms.filter(m => m.dayChg < 0).length, green = ms.length - red;
+    return ms.length < 3 ? 'unknown' : red > green ? 'red' : 'green';
+  }
+
+  // ---------- safety guards (architecture §5: daily loss limit, kill switch, loss streak) ----------
+  function lossStreak() {
+    let n = 0;
+    for (let i = S.closed.length - 1; i >= S.streakFrom && S.closed[i].pnl <= 0; i--) n++;
+    return n;
+  }
+  function halt(kind, reason) {
+    if (S.halt && S.halt.kind === 'kill' && kind !== 'kill') return;
+    S.halt = { kind, reason, at: Date.now() };
+    for (const t of S.tickets) if (t.status === 'pending') t.status = 'cancelled';
+    log(`HALT (${kind}): ${reason}. No new tickets until ${kind === 'kill' ? 'you press Resume' : 'the next UTC day or you press Resume'}.`);
+  }
+  function guardCheck() {
+    const today = new Date().toISOString().slice(0, 10), eq = equity();
+    if (!S.day || S.day.date !== today) {
+      S.day = { date: today, equity: eq };
+      if (S.halt && S.halt.kind !== 'kill') { S.halt = null; S.streakFrom = S.closed.length; log('New UTC day: daily guards reset'); }
+    }
+    if (S.halt) return;
+    const dayLoss = (S.day.equity - eq) / S.day.equity;
+    if (dayLoss >= S.settings.dayLoss / 100) halt('daily', `daily loss limit hit: down ${(dayLoss * 100).toFixed(1)}% today (limit ${S.settings.dayLoss}%)`);
+    else if (lossStreak() >= S.settings.maxLosses) halt('streak', `${lossStreak()} losses in a row (limit ${S.settings.maxLosses})`);
+  }
+  function killSwitch() {
+    for (const p of [...S.positions]) {
+      const m = M[p.coin];
+      close(p, m ? m.mark : p.entry, 'KILL');
+    }
+    halt('kill', 'kill switch pressed: all paper positions closed at market');
+    save(); render();
+  }
+  function resume() {
+    if (!S.halt) return;
+    log(`RESUME: guards re-armed (was halted: ${S.halt.reason})`);
+    S.halt = null; S.streakFrom = S.closed.length; S.day = { date: new Date().toISOString().slice(0, 10), equity: equity() };
+    save(); propose(); render();
+  }
+
+  function pruneTickets() { S.tickets = S.tickets.filter(t => Date.now() - t.at < RULES.ticketTtlMs && t.status === 'pending'); }
+  function propose() {
+    pruneTickets();
+    if (!feedOk) return;
+    guardCheck();
+    if (S.halt) { save(); return; }
+    const eq = equity(), lean = boardLean();
+    for (const coin of COINS) {
+      const m = M[coin];
+      if (!m || S.positions.some(p => p.coin === coin) || S.tickets.some(t => t.coin === coin)) continue;
+      const why = [];
+      const skip = reason => { if (lastSkip[coin] !== reason) { lastSkip[coin] = reason; log(`SKIP ${coin}: ${reason}`); } };
+      if (!isFinite(m.expMove) || m.expMove <= 0) { skip('not enough candles for ATR'); continue; }
+      if (m.bias === 'mixed') { skip(`short-term bias mixed (4h ${pct(m.chg4h)}, price vs EMA20)`); continue; }
+      if ((lean === 'red' && m.bias === 'long') || (lean === 'green' && m.bias === 'short')) {
+        skip(`${m.bias} bias against the ${lean} board`); continue;
+      }
+      const margin = +(eq * RULES.marginPick).toFixed(2);
+      if ((marginUsed() + margin) / eq > RULES.totalMarginCap) { skip(`margin cap: would use ${pct((marginUsed() + margin) / eq, 0)} > 70%`); continue; }
+      let lev = leverageFor(m.expMove, S.settings.roi / 100, m.maxLev);
+      // keep the stop safely inside liquidation; lower leverage until it is
+      const slDist = m.expMove * RULES.slFraction;
+      while (lev > RULES.minLev && slDist > RULES.liqBuffer * liqDistance(lev, m.maxLev)) lev--;
+      if (slDist > RULES.liqBuffer * liqDistance(lev, m.maxLev)) { skip('stop would sit too close to liquidation even at minimum leverage'); continue; }
+      const notional = margin * lev;
+      const slip = slippage(m.bias === 'long' ? m.asks : m.bids, notional, m.mid);
+      if (!(slip <= RULES.maxSlippage)) { skip(`slippage ${isFinite(slip) ? pct(slip) : 'book too thin'} > 0.3% for ${usd(notional, 0)}`); continue; }
+      const dir = m.bias === 'long' ? 1 : -1, entry = m.mark * (1 + dir * slip);
+      const tp = entry * (1 + dir * m.expMove), sl = entry * (1 - dir * slDist);
+      const liq = entry * (1 - dir * liqDistance(lev, m.maxLev));
+      const feeRate = S.settings.fee / 100, fees = notional * feeRate * 2;  // stored on the ticket and position
+      const winUsd = notional * m.expMove - fees, lossUsd = notional * slDist + fees;
+      why.push(`expected move ${pct(m.expMove)} → ${lev}x (target ${S.settings.roi}% on margin; raw ${(S.settings.roi / 100 / m.expMove).toFixed(1)}x, coin max ${m.maxLev}x)`);
+      why.push(`bias ${m.bias} (4h ${pct(m.chg4h)}, 1h ${pct(m.chg1h)}), board ${lean}; funding ${pct(m.funding, 4)}/h; slippage ${pct(slip, 3)}`);
+      const t = { id: 'T' + String(S.nextId++).padStart(4, '0'), coin, side: m.bias, lev, margin, notional, entry, tp, sl, liq, slip, feeRate,
+                  expMove: m.expMove, roiTp: winUsd / margin, roiSl: -lossUsd / margin, riskOfEquity: lossUsd / eq,
+                  why: why.join(' · '), at: Date.now(), status: 'pending' };
+      S.tickets.push(t);
+      log(`PROPOSE ${t.id} ${coin} ${t.side.toUpperCase()} ${lev}x · exp move ${pct(t.expMove)} · margin ${usd(margin)} · entry ${px(entry)} TP ${px(tp)} SL ${px(sl)} · ${t.why}`);
+    }
+    save();
+  }
+
+  let approving = false;
+  async function approve(id) {
+    if (approving) return;
+    approving = true;
+    try {
+      sync();  // another tab may have filled or changed things
+      const t0 = S.tickets.find(x => x.id === id && x.status === 'pending');
+      if (!t0) return;
+      await refreshMarks();  // fill at a current price, never at the price from when the ticket was written
+      sync();
+      const t = S.tickets.find(x => x.id === id && x.status === 'pending');
+      if (!t) return;
+      if (S.halt) { t.status = 'cancelled'; log(`${id} refused: desk is halted (${S.halt.reason})`); return finish(); }
+      const m = M[t.coin], eq = equity();
+      if (!m || Date.now() - t.at > RULES.ticketTtlMs) { t.status = 'expired'; log(`${id} expired before approval`); return finish(); }
+      if (!marksFresh(t.coin, 20000)) { log(`${id} not filled: no current price for ${t.coin} (data stale). Try again.`); return render(); }
+      if ((marginUsed() + t.margin) / eq > RULES.totalMarginCap) { t.status = 'rejected'; log(`${id} rejected: margin cap`); return finish(); }
+      const dir = t.side === 'long' ? 1 : -1, entry = m.mark * (1 + dir * (t.slip ?? 0));
+      const drift = Math.abs(entry / t.entry - 1), maxDrift = t.expMove * RULES.slFraction / 2;
+      if (drift > maxDrift) {
+        t.status = 'rejected';
+        log(`${id} not filled: price moved ${pct(drift)} since the ticket (limit ${pct(maxDrift)}). Wait for a new ticket.`);
+        return finish();
+      }
+      // re-quote: same % distances from the current entry
+      const feeRate = t.feeRate ?? S.settings.fee / 100, k = entry / t.entry, fee = t.notional * feeRate;
+      S.equityBase -= fee; S.fees += fee;
+      S.positions.push({ id, coin: t.coin, side: t.side, lev: t.lev, margin: t.margin, entry, qty: t.notional / entry,
+                         tp: t.tp * k, sl: t.sl * k, liq: t.liq * k, expMove: t.expMove, feeRate,
+                         openedAt: Date.now(), lastChecked: m.markAt, feesPaid: fee });
+      t.status = 'filled';
+      log(`FILL (paper) ${id} ${t.coin} ${t.side.toUpperCase()} ${t.lev}x @ ${px(entry)} (ticket ${px(t.entry)}) · size ${usd(t.notional)} · fee ${usd(fee)}`);
+      // other pending tickets that no longer fit under the 70% cap were alternatives: cancel them
+      for (const o of S.tickets) {
+        if (o.status === 'pending' && (marginUsed() + o.margin) / equity() > RULES.totalMarginCap) {
+          o.status = 'cancelled';
+          log(`${o.id} cancelled: ${id} was chosen and both would exceed the 70% margin cap`);
+        }
+      }
+      finish();
+    } finally { approving = false; }
+  }
+  function reject(id) {
+    sync();
+    const t = S.tickets.find(x => x.id === id && x.status === 'pending');
+    if (t) { t.status = 'rejected'; log(`${id} rejected by you`); finish(); }
+  }
+
+  // Which exit a price range touched, checking the worst case first: liquidation, then stop, then target.
+  function exitFor(p, lo, hi) {
+    const long = p.side === 'long';
+    if (long ? lo <= p.liq : hi >= p.liq) return ['LIQ', p.liq];
+    if (long ? lo <= p.sl : hi >= p.sl) return ['SL', p.sl];
+    if (long ? hi >= p.tp : lo <= p.tp) return ['TP', p.tp];
+    return null;
+  }
+  function monitor() {
+    let changed = false;
+    for (const p of [...S.positions]) {
+      const m = M[p.coin]; if (!m) continue;
+      const hit = exitFor(p, m.mark, m.mark);
+      if (hit) { close(p, hit[1], hit[0]); changed = true; }
+      else p.lastChecked = Math.max(p.lastChecked || 0, m.markAt || 0);
+    }
+    if (!changed && S.positions.length) {  // track drawdown while positions are open, not only at closes
+      const eq = equity();
+      if (eq > S.peak || (S.peak - eq) / S.peak > S.maxDd) { S.peak = Math.max(S.peak, eq); S.maxDd = Math.max(S.maxDd, (S.peak - eq) / S.peak); save(); }
+    }
+  }
+  // After the page was hidden or closed, replay 1-minute candles since each position was last checked,
+  // so a TP/SL/liquidation touched in the meantime is still honoured (worst case first within a candle).
+  async function catchUp() {
+    for (const p of [...S.positions]) {
+      const since = p.lastChecked || p.openedAt;
+      if (Date.now() - since < 90e3) continue;
+      try {
+        const cs = await info({ type: 'candleSnapshot', req: { coin: p.coin, interval: '1m', startTime: since, endTime: Date.now() } });
+        for (const k of cs) {
+          const hit = exitFor(p, +k.l, +k.h);
+          if (hit) { log(`${p.id}: ${hit[0]} was touched at ${new Date(+k.t).toTimeString().slice(0, 5)} while the page was away`); close(p, hit[1], hit[0]); break; }
+          p.lastChecked = +k.T || +k.t;
+        }
+      } catch (e) { log(`${p.id}: could not check prices from while the page was away (${e.message})`); }
+    }
+    save();
+  }
+  function close(p, price, why) {
+    const fee = p.qty * price * (p.feeRate ?? S.settings.fee / 100);
+    // a liquidation is booked as losing the whole margin (exchanges keep what's left as a penalty): conservative on paper
+    const gross = why === 'LIQ' ? -p.margin : (p.side === 'long' ? price - p.entry : p.entry - price) * p.qty;
+    S.equityBase += gross - fee; S.fees += fee;
+    const pnl = gross - fee - p.feesPaid;
+    S.positions = S.positions.filter(x => x !== p);
+    S.closed.push({ id: p.id, coin: p.coin, side: p.side, lev: p.lev, entry: p.entry, exit: price, pnl, roi: pnl / p.margin, why, at: Date.now() });
+    log(`CLOSE ${p.id} ${p.coin} ${p.side.toUpperCase()} ${p.lev}x at ${why} ${px(price)} · PnL ${usd(pnl)} (${pct(pnl / p.margin, 1)} on margin)`);
+    finish();
+  }
+  function finish() {
+    guardCheck();
+    const eq = equity();
+    S.peak = Math.max(S.peak, eq);
+    S.maxDd = Math.max(S.maxDd, (S.peak - eq) / S.peak);
+    save(); render();
+  }
+
+  // ---------- render ----------
+  function render() {
+    const eq = equity(), d = eq - S.start;
+    $('eq').textContent = usd(eq);
+    $('eq-delta').innerHTML = `<span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${usd(d)}</span> <span class="muted">· ${(eq / S.start).toFixed(1)}x from ${usd(S.start, 0)}</span>`;
+    const f = $('feed');
+    const stale = feedOk && (markStale || COINS.some(c => M[c] && Date.now() - M[c].markAt > 90e3));
+    f.textContent = tr(feedOk === null ? 'LOADING' : !feedOk ? 'DATA OFFLINE' : stale ? 'DATA STALE' : 'DATA LIVE');
+    f.className = 'badge ' + (feedOk && !stale ? 'ok' : feedOk === null ? 'muted' : 'err');
+    $('savewarn').hidden = !saveFailed;
+
+    $('snap').innerHTML = '<tr><th>Coin</th><th>Mark</th><th>1h</th><th>4h</th><th>24h</th><th>Funding/h</th><th>OI</th><th>Exp. move</th><th>→ Lev</th><th>Bias</th><th>Max</th></tr>'
+      + COINS.map(c => {
+        const m = M[c];
+        if (!m) return `<tr><td>${c}</td><td colspan="10" class="muted">–</td></tr>`;
+        const cl = v => (v >= 0 ? 'up' : 'down');
+        return `<tr><td><b>${c}</b></td><td>${px(m.mark)}</td><td class="${cl(m.chg1h)}">${pct(m.chg1h)}</td><td class="${cl(m.chg4h)}">${pct(m.chg4h)}</td>
+          <td class="${cl(m.dayChg)}">${pct(m.dayChg)}</td><td>${pct(m.funding, 4)}</td><td>${m.oi >= 1e6 ? usd(m.oi / 1e6, 1) + 'M' : usd(m.oi / 1e3, 0) + 'K'}</td>
+          <td>${isFinite(m.expMove) ? pct(m.expMove).replace('+', '') : '–'}</td><td>${isFinite(m.expMove) ? leverageFor(m.expMove, S.settings.roi / 100, m.maxLev) + 'x' : '–'}</td>
+          <td class="${m.bias === 'long' ? 'up' : m.bias === 'short' ? 'down' : 'muted'}">${m.bias}</td><td class="muted">${m.maxLev}x</td></tr>`;
+      }).join('');
+    const lean = boardLean();
+    $('board').textContent = `Board: ${lean}${lean === 'red' ? ' → prefer shorts' : lean === 'green' ? ' → prefer longs' : ''} · last scan ${lastScan ? new Date(lastScan).toTimeString().slice(0, 8) : '–'}`;
+
+    const pending = S.tickets.filter(t => t.status === 'pending');
+    $('tickets').innerHTML = pending.length ? pending.map(t => `<div class="ticket">
+        <div class="t-head"><b>${t.id}</b><b class="${t.side === 'long' ? 'up' : 'down'}">${t.coin} ${t.side.toUpperCase()} ${t.lev}x</b>
+          <span class="muted">${tr('expires in {s}s', { s: Math.max(0, Math.round((RULES.ticketTtlMs - (Date.now() - t.at)) / 1000)) })}</span>
+          <button class="go" data-approve="${t.id}">${tr('Approve {id} (paper)', { id: t.id })}</button><button class="no" data-reject="${t.id}">${tr('Reject')}</button></div>
+        <div class="nums">
+          <div><span>${tr('Entry')}</span>${px(t.entry)}</div><div><span>${tr('Take profit')}</span>${px(t.tp)}</div><div><span>${tr('Stop loss')}</span>${px(t.sl)}</div><div><span>${tr('Liquidation ≈')}</span><b class="down">${px(t.liq)}</b></div>
+          <div><span>${tr('Margin')}</span>${usd(t.margin)}</div><div><span>${tr('Size')}</span>${usd(t.notional)}</div><div><span>${tr('At TP')}</span><b class="up">${pct(t.roiTp, 0)}</b> ${tr('on margin')}</div><div><span>${tr('At SL')}</span><b class="down">${pct(t.roiSl, 0)}</b> · ${tr('risks {p} of stack', { p: pct(t.riskOfEquity, 1).replace('+', '') })}</div>
+        </div>
+        <div class="why">${esc(t.why)}</div></div>`).join('')
+      : `<div class="muted">${tr(S.halt ? 'No tickets: the desk is halted (see Safety guards).' : feedOk === false ? 'No tickets: market data is offline.' : 'No ticket right now: no coin passes every rule (see the decision log).')}</div>`;
+
+    $('open').innerHTML = '<tr><th>Ticket</th><th>Coin</th><th>Side</th><th>Lev</th><th>Entry</th><th>Mark</th><th>TP</th><th>SL</th><th>uPnL</th><th>% margin</th></tr>'
+      + (S.positions.length ? S.positions.map(p => {
+        const u = unrealised(p), m = M[p.coin];
+        return `<tr><td>${p.id}</td><td>${p.coin}</td><td class="${p.side === 'long' ? 'up' : 'down'}">${p.side}</td><td>${p.lev}x</td><td>${px(p.entry)}</td>
+          <td>${m ? px(m.mark) : '–'}</td><td>${px(p.tp)}</td><td>${px(p.sl)}</td><td class="${u >= 0 ? 'up' : 'down'}">${usd(u)}</td><td class="${u >= 0 ? 'up' : 'down'}">${pct(u / p.margin, 1)}</td></tr>`;
+      }).join('') : `<tr><td colspan="10" class="muted">${tr('No open positions')}</td></tr>`);
+
+    const cells = S.closed.slice(-60).map(c => `<div class="cell ${c.pnl >= 0 ? 'w' : 'l'}" title="${c.id} ${c.coin} ${usd(c.pnl)}">${c.coin[0]}</div>`)
+      .concat(S.positions.map(p => `<div class="cell o" title="${p.id} ${p.coin} open">${p.coin[0]}</div>`));
+    $('grid').innerHTML = cells.join('') || `<span class="muted">${tr('No trades yet')}</span>`;
+
+    const top = [...S.closed].sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl)).slice(0, 8);
+    $('top').innerHTML = '<tr><th>Coin</th><th>Side</th><th>Lev</th><th>PnL</th><th>ROI</th></tr>' + (top.length ? top.map(c =>
+      `<tr><td>${c.coin}</td><td>${c.side}</td><td>${c.lev}x</td><td class="${c.pnl >= 0 ? 'up' : 'down'}">${usd(c.pnl)}</td><td class="${c.pnl >= 0 ? 'up' : 'down'}">${pct(c.roi, 0)}</td></tr>`).join('')
+      : `<tr><td colspan="5" class="muted">${tr('No closed trades yet')}</td></tr>`);
+
+    const wins = S.closed.filter(c => c.pnl > 0).length, n = S.closed.length;
+    const avgW = wins ? S.closed.filter(c => c.pnl > 0).reduce((s, c) => s + c.pnl, 0) / wins : 0;
+    const avgL = n - wins ? S.closed.filter(c => c.pnl <= 0).reduce((s, c) => s + c.pnl, 0) / (n - wins) : 0;
+    const stat = (k, v, cls = '') => `<div class="stat"><span>${tr(k)}</span><b class="${cls}">${v}</b></div>`;
+    $('stats').innerHTML = stat('Win rate', n ? Math.round(wins / n * 100) + '%' : '–') + stat('Trades', n + (S.positions.length ? ` (+${S.positions.length} open)` : ''))
+      + stat('Total fees', usd(S.fees)) + stat('Max drawdown', S.maxDd > 0 ? pct(-S.maxDd, 1) : '0.0%', S.maxDd > 0 ? 'down' : '')
+      + stat('Avg win', usd(avgW), 'up') + stat('Avg loss', usd(avgL), 'down') + stat('Margin in use', pct(marginUsed() / Math.max(equity(), 1e-9), 0).replace('+', ''))
+      + stat('Mode', 'PAPER', 'paper');
+
+    $('log').innerHTML = S.log.slice(0, 120).map(l => `<div><span class="muted">${esc(l.t)}</span> ${esc(l.msg)}</div>`).join('') || '<div class="muted">Nothing yet</div>';
+    $('s-start').value = S.settings.start; $('s-roi').value = S.settings.roi; $('s-fee').value = S.settings.fee;
+    $('s-dayloss').value = S.settings.dayLoss; $('s-maxloss').value = S.settings.maxLosses;
+    const gs = $('g-state');
+    gs.textContent = tr(S.halt ? 'HALTED' : 'ARMED');
+    gs.className = S.halt ? 'halted' : 'armed';
+    const dayPnl = S.day ? equity() / S.day.equity - 1 : 0;
+    $('g-day').textContent = S.day ? pct(dayPnl, 1) : '–';
+    $('g-day').className = dayPnl >= 0 ? 'up' : 'down';
+    $('g-streak').textContent = `${lossStreak()} / ${S.settings.maxLosses}`;
+    $('g-reason').textContent = S.halt ? S.halt.reason : tr("Stops new tickets if today's loss reaches {d}% or after {n} losses in a row.", { d: S.settings.dayLoss, n: S.settings.maxLosses });
+    $('g-resume').hidden = !S.halt;
+  }
+
+  document.addEventListener('click', e => {
+    const a = e.target.closest('[data-approve]'), r = e.target.closest('[data-reject]');
+    if (a) approve(a.dataset.approve);
+    if (r) reject(r.dataset.reject);
+  });
+  $('s-save').addEventListener('click', () => {
+    const num = (id, def) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : def; };
+    const roi = clamp(num('s-roi', 100), 30, 150), fee = clamp(num('s-fee', 0.05), 0, 1);
+    S.settings.roi = roi; S.settings.fee = fee;
+    S.settings.dayLoss = clamp(num('s-dayloss', 20), 5, 30);
+    S.settings.maxLosses = clamp(Math.round(num('s-maxloss', 3)), 2, 5);
+    save();
+    log(`Settings: target ROI ${roi}%, taker fee ${fee}%`);
+    render();
+  });
+  $('g-kill').addEventListener('click', () => { if (confirm(tr('Kill switch: close every paper position at market and stop all new tickets?'))) killSwitch(); });
+  $('lang').addEventListener('click', () => {
+    LANG = LANG === 'zo' ? 'en' : 'zo';
+    try { localStorage.setItem('cimphawng-lang', LANG); } catch (e) { /* ignore */ }
+    applyLang(); render();
+  });
+  $('g-resume').addEventListener('click', resume);
+  $('s-reset').addEventListener('click', () => {
+    const start = +$('s-start').value > 0 ? +$('s-start').value : 53;
+    if (!confirm(`Reset the paper account to ${usd(start)}? Closed trades and the log are cleared.`)) return;
+    S = fresh(start); log(`Paper account reset to ${usd(start)}`); render();
+  });
+
+  applyLang();
+  pruneTickets(); save();  // expired tickets from an earlier visit never show again
+  render();
+  scan().then(async () => { if (S.positions.length) { await catchUp(); monitor(); finish(); } });
+  setInterval(() => { if (!document.hidden) scan(); }, 60000);
+  setInterval(() => { if (!document.hidden && feedOk) { monitor(); render(); } }, 1000);
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden || !S.positions.length) return;
+    await refreshMarks(); await catchUp(); monitor(); finish();
+  });
+  // between full scans, refresh mark prices every 10s so TP/SL are watched closely
+  // Mark prices every 10s while positions are open. This keeps running when the tab is hidden
+  // (browsers may slow it down); catchUp() covers anything missed.
+  setInterval(async () => {
+    if (!feedOk || !S.positions.length) return;
+    await refreshMarks();
+    monitor(); render();
+  }, 10000);
+  window.__desk = { M, S: () => S, scan, approve, monitor, render, killSwitch, resume, catchUp, refreshMarks };  // for tests
+})();
+</script>
+</body>
+</html>

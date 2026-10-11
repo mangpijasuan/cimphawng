@@ -47,6 +47,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ../index.html:/srv/web/index.html:ro
+      - ../desk.html:/srv/web/desk.html:ro
       - caddy_data:/data
       - caddy_config:/config
 
