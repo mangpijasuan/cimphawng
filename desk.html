@@ -69,6 +69,7 @@
   <span class="badge paper">PAPER ONLY · NO REAL ORDERS</span>
   <button id="lang" title="Language / Pau">English</button>
   <span class="badge" id="feed">…</span>
+  <span class="badge err" id="savewarn" hidden>Couldn't save in this browser: changes may be lost on reload</span>
   <div class="eq"><span class="muted">EQUITY</span><b id="eq">$–</b><span id="eq-delta"></span></div>
 </header>
 
@@ -190,7 +191,8 @@
     'Max losses in a row': 'A zom mansuah tam pen',
     'Save': 'Koih in',
     'Reset paper account': 'Kimawlna account kipan kik',
-    'DATA LIVE': 'DATA TU-IN', 'DATA OFFLINE': 'DATA KIZOM LO', 'LOADING': 'KIPAN LAI',
+    'DATA LIVE': 'DATA TU-IN', 'DATA OFFLINE': 'DATA KIZOM LO', 'LOADING': 'KIPAN LAI', 'DATA STALE': 'DATA LUI',
+    "Couldn't save in this browser: changes may be lost on reload": 'Hih browser ah koih theih lo: reload ciangin a kikhel te mang thei hi',
     'Approve {id} (paper)': '{id} pom (kimawlna)',
     'Reject': 'Nawl',
     'expires in {s}s': 'sekhen {s} sungah bei ding',
@@ -245,7 +247,22 @@
   if (!S || !S.settings) S = fresh(53);
   S.settings = { ...DEFAULT_SETTINGS, ...S.settings };
   if (S.streakFrom === undefined) Object.assign(S, { halt: null, day: null, streakFrom: 0 });
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } };
+  let saveFailed = false;
+  const save = () => {
+    S.rev = (S.rev || 0) + 1;
+    if (S.closed.length > 1000) S.closed = S.closed.slice(-1000);  // keep storage small; stats cover the last 1000 trades
+    try { localStorage.setItem(KEY, JSON.stringify(S)); saveFailed = false; }
+    catch (e) { saveFailed = true; }  // shown as a warning in the header
+  };
+  // Another tab changed the account: adopt its newer state before doing anything else.
+  function sync() {
+    try {
+      const other = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (other && other.settings && (other.rev || 0) > (S.rev || 0)) { S = other; S.settings = { ...DEFAULT_SETTINGS, ...S.settings }; return true; }
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+  addEventListener('storage', e => { if (e.key === KEY && sync()) render(); });
   function log(msg) {
     S.log.unshift({ t: new Date().toISOString().slice(0, 19).replace('T', ' '), msg });
     S.log = S.log.slice(0, 300);
@@ -300,14 +317,45 @@
   function liqDistance(lev, coinMax) { return 1 / lev - 1 / (2 * (coinMax || RULES.hardCap)); }
   // <<< desk math
 
+  let scanning = false, markStale = false;
+  // Apply mark prices from one metaAndAssetCtxs response, unless a newer update already arrived.
+  function applyMarks(meta, ctxs, startedAt) {
+    for (const coin of COINS) {
+      const i = meta.universe.findIndex(u => u.name === coin);
+      if (i < 0) { delete M[coin]; continue; }  // market no longer listed: drop its old snapshot
+      const m = M[coin], c = ctxs[i];
+      if (!m || startedAt < m.markAt) continue;
+      Object.assign(m, { mark: +c.markPx, mid: +(c.midPx || c.markPx), funding: +c.funding, markAt: startedAt });
+    }
+  }
+  // Fresh exchange mark prices (not mids) for valuing positions and checking TP/SL/liquidation.
+  async function refreshMarks() {
+    const startedAt = Date.now();
+    try {
+      const [meta, ctxs] = await info({ type: 'metaAndAssetCtxs' });
+      applyMarks(meta, ctxs, startedAt);
+      if (markStale) log('Mark prices are updating again');
+      markStale = false;
+      return true;
+    } catch (e) {
+      if (!markStale) log(`Mark price refresh failed (${e.message}); open positions are being checked on old prices`);
+      markStale = true;
+      return false;
+    }
+  }
+  const marksFresh = (coin, maxAgeMs) => M[coin] && Date.now() - M[coin].markAt < maxAgeMs;
+
   async function scan() {
+    if (scanning) return;  // one scan at a time, so an older one can't overwrite a newer one
+    scanning = true;
     lastScan = Date.now();
     try {
+      const startedAt = Date.now();
       const [meta, ctxs] = await info({ type: 'metaAndAssetCtxs' });
       const now = Date.now();
       for (const coin of COINS) {
         const i = meta.universe.findIndex(u => u.name === coin);
-        if (i < 0) continue;
+        if (i < 0) { if (M[coin]) log(`${coin} is no longer listed; dropped from the scan`); delete M[coin]; continue; }
         const u = meta.universe[i], c = ctxs[i];
         const [candles, book] = await Promise.all([
           info({ type: 'candleSnapshot', req: { coin, interval: '1h', startTime: now - 60 * 3600e3, endTime: now } }),
@@ -318,17 +366,21 @@
         const chg = h => (cs.length > h ? last / cs[cs.length - 1 - h].c - 1 : NaN);
         const a = atr(cs), expMove = a / mark * 2;  // ~4h expected move from 1h ATR (sqrt of 4 hours)
         const closes = cs.map(k => k.c), e20 = ema(closes.slice(-40), 20);
+        const prev = M[coin];
+        if (prev && prev.markAt > startedAt) { Object.assign(prev, { maxLev: +u.maxLeverage || RULES.hardCap, expMove, bids: book.levels[0], asks: book.levels[1], at: now }); continue; }
         M[coin] = {
           coin, mark, mid, maxLev: +u.maxLeverage || RULES.hardCap, funding: +c.funding, oi: +c.openInterest * mark,
           dayChg: mark / +c.prevDayPx - 1, chg1h: chg(1), chg4h: chg(4), expMove, vol24: +c.dayNtlVlm,
           bias: mark > e20 && chg(4) > 0 ? 'long' : mark < e20 && chg(4) < 0 ? 'short' : 'mixed',
-          bids: book.levels[0], asks: book.levels[1], at: now,
+          bids: book.levels[0], asks: book.levels[1], at: now, markAt: startedAt,
         };
       }
-      feedOk = true;
+      feedOk = true; markStale = false;
     } catch (e) {
       feedOk = false;
       log('Market data unavailable (' + e.message + '). No tickets until it returns.');
+    } finally {
+      scanning = false;
     }
     propose();
     render();
@@ -388,8 +440,9 @@
     save(); propose(); render();
   }
 
+  function pruneTickets() { S.tickets = S.tickets.filter(t => Date.now() - t.at < RULES.ticketTtlMs && t.status === 'pending'); }
   function propose() {
-    S.tickets = S.tickets.filter(t => Date.now() - t.at < RULES.ticketTtlMs && t.status === 'pending');
+    pruneTickets();
     if (!feedOk) return;
     guardCheck();
     if (S.halt) { save(); return; }
@@ -417,11 +470,11 @@
       const dir = m.bias === 'long' ? 1 : -1, entry = m.mark * (1 + dir * slip);
       const tp = entry * (1 + dir * m.expMove), sl = entry * (1 - dir * slDist);
       const liq = entry * (1 - dir * liqDistance(lev, m.maxLev));
-      const feeRate = S.settings.fee / 100, fees = notional * feeRate * 2;
+      const feeRate = S.settings.fee / 100, fees = notional * feeRate * 2;  // stored on the ticket and position
       const winUsd = notional * m.expMove - fees, lossUsd = notional * slDist + fees;
       why.push(`expected move ${pct(m.expMove)} → ${lev}x (target ${S.settings.roi}% on margin; raw ${(S.settings.roi / 100 / m.expMove).toFixed(1)}x, coin max ${m.maxLev}x)`);
       why.push(`bias ${m.bias} (4h ${pct(m.chg4h)}, 1h ${pct(m.chg1h)}), board ${lean}; funding ${pct(m.funding, 4)}/h; slippage ${pct(slip, 3)}`);
-      const t = { id: 'T' + String(S.nextId++).padStart(4, '0'), coin, side: m.bias, lev, margin, notional, entry, tp, sl, liq,
+      const t = { id: 'T' + String(S.nextId++).padStart(4, '0'), coin, side: m.bias, lev, margin, notional, entry, tp, sl, liq, slip, feeRate,
                   expMove: m.expMove, roiTp: winUsd / margin, roiSl: -lossUsd / margin, riskOfEquity: lossUsd / eq,
                   why: why.join(' · '), at: Date.now(), status: 'pending' };
       S.tickets.push(t);
@@ -430,37 +483,96 @@
     save();
   }
 
-  function approve(id) {
-    const t = S.tickets.find(x => x.id === id && x.status === 'pending');
-    if (!t) return;
-    if (S.halt) { t.status = 'cancelled'; log(`${id} refused: desk is halted (${S.halt.reason})`); return finish(); }
-    const m = M[t.coin], eq = equity();
-    if (!m || Date.now() - t.at > RULES.ticketTtlMs) { t.status = 'expired'; log(`${id} expired before approval`); return finish(); }
-    if ((marginUsed() + t.margin) / eq > RULES.totalMarginCap) { t.status = 'rejected'; log(`${id} rejected: margin cap`); return finish(); }
-    const fee = t.notional * S.settings.fee / 100;
-    S.equityBase -= fee; S.fees += fee;
-    S.positions.push({ id, coin: t.coin, side: t.side, lev: t.lev, margin: t.margin, entry: t.entry, qty: t.notional / t.entry,
-                       tp: t.tp, sl: t.sl, liq: t.liq, expMove: t.expMove, openedAt: Date.now(), feesPaid: fee });
-    t.status = 'filled';
-    log(`FILL (paper) ${id} ${t.coin} ${t.side.toUpperCase()} ${t.lev}x @ ${px(t.entry)} · size ${usd(t.notional)} · fee ${usd(fee)}`);
-    finish();
+  let approving = false;
+  async function approve(id) {
+    if (approving) return;
+    approving = true;
+    try {
+      sync();  // another tab may have filled or changed things
+      const t0 = S.tickets.find(x => x.id === id && x.status === 'pending');
+      if (!t0) return;
+      await refreshMarks();  // fill at a current price, never at the price from when the ticket was written
+      sync();
+      const t = S.tickets.find(x => x.id === id && x.status === 'pending');
+      if (!t) return;
+      if (S.halt) { t.status = 'cancelled'; log(`${id} refused: desk is halted (${S.halt.reason})`); return finish(); }
+      const m = M[t.coin], eq = equity();
+      if (!m || Date.now() - t.at > RULES.ticketTtlMs) { t.status = 'expired'; log(`${id} expired before approval`); return finish(); }
+      if (!marksFresh(t.coin, 20000)) { log(`${id} not filled: no current price for ${t.coin} (data stale). Try again.`); return render(); }
+      if ((marginUsed() + t.margin) / eq > RULES.totalMarginCap) { t.status = 'rejected'; log(`${id} rejected: margin cap`); return finish(); }
+      const dir = t.side === 'long' ? 1 : -1, entry = m.mark * (1 + dir * (t.slip ?? 0));
+      const drift = Math.abs(entry / t.entry - 1), maxDrift = t.expMove * RULES.slFraction / 2;
+      if (drift > maxDrift) {
+        t.status = 'rejected';
+        log(`${id} not filled: price moved ${pct(drift)} since the ticket (limit ${pct(maxDrift)}). Wait for a new ticket.`);
+        return finish();
+      }
+      // re-quote: same % distances from the current entry
+      const feeRate = t.feeRate ?? S.settings.fee / 100, k = entry / t.entry, fee = t.notional * feeRate;
+      S.equityBase -= fee; S.fees += fee;
+      S.positions.push({ id, coin: t.coin, side: t.side, lev: t.lev, margin: t.margin, entry, qty: t.notional / entry,
+                         tp: t.tp * k, sl: t.sl * k, liq: t.liq * k, expMove: t.expMove, feeRate,
+                         openedAt: Date.now(), lastChecked: m.markAt, feesPaid: fee });
+      t.status = 'filled';
+      log(`FILL (paper) ${id} ${t.coin} ${t.side.toUpperCase()} ${t.lev}x @ ${px(entry)} (ticket ${px(t.entry)}) · size ${usd(t.notional)} · fee ${usd(fee)}`);
+      // other pending tickets that no longer fit under the 70% cap were alternatives: cancel them
+      for (const o of S.tickets) {
+        if (o.status === 'pending' && (marginUsed() + o.margin) / equity() > RULES.totalMarginCap) {
+          o.status = 'cancelled';
+          log(`${o.id} cancelled: ${id} was chosen and both would exceed the 70% margin cap`);
+        }
+      }
+      finish();
+    } finally { approving = false; }
   }
   function reject(id) {
+    sync();
     const t = S.tickets.find(x => x.id === id && x.status === 'pending');
     if (t) { t.status = 'rejected'; log(`${id} rejected by you`); finish(); }
   }
 
+  // Which exit a price range touched, checking the worst case first: liquidation, then stop, then target.
+  function exitFor(p, lo, hi) {
+    const long = p.side === 'long';
+    if (long ? lo <= p.liq : hi >= p.liq) return ['LIQ', p.liq];
+    if (long ? lo <= p.sl : hi >= p.sl) return ['SL', p.sl];
+    if (long ? hi >= p.tp : lo <= p.tp) return ['TP', p.tp];
+    return null;
+  }
   function monitor() {
+    let changed = false;
     for (const p of [...S.positions]) {
       const m = M[p.coin]; if (!m) continue;
-      const long = p.side === 'long';
-      const hitTp = long ? m.mark >= p.tp : m.mark <= p.tp, hitSl = long ? m.mark <= p.sl : m.mark >= p.sl;
-      if (hitTp || hitSl) close(p, hitTp ? p.tp : p.sl, hitTp ? 'TP' : 'SL');
+      const hit = exitFor(p, m.mark, m.mark);
+      if (hit) { close(p, hit[1], hit[0]); changed = true; }
+      else p.lastChecked = Math.max(p.lastChecked || 0, m.markAt || 0);
+    }
+    if (!changed && S.positions.length) {  // track drawdown while positions are open, not only at closes
+      const eq = equity();
+      if (eq > S.peak || (S.peak - eq) / S.peak > S.maxDd) { S.peak = Math.max(S.peak, eq); S.maxDd = Math.max(S.maxDd, (S.peak - eq) / S.peak); save(); }
     }
   }
+  // After the page was hidden or closed, replay 1-minute candles since each position was last checked,
+  // so a TP/SL/liquidation touched in the meantime is still honoured (worst case first within a candle).
+  async function catchUp() {
+    for (const p of [...S.positions]) {
+      const since = p.lastChecked || p.openedAt;
+      if (Date.now() - since < 90e3) continue;
+      try {
+        const cs = await info({ type: 'candleSnapshot', req: { coin: p.coin, interval: '1m', startTime: since, endTime: Date.now() } });
+        for (const k of cs) {
+          const hit = exitFor(p, +k.l, +k.h);
+          if (hit) { log(`${p.id}: ${hit[0]} was touched at ${new Date(+k.t).toTimeString().slice(0, 5)} while the page was away`); close(p, hit[1], hit[0]); break; }
+          p.lastChecked = +k.T || +k.t;
+        }
+      } catch (e) { log(`${p.id}: could not check prices from while the page was away (${e.message})`); }
+    }
+    save();
+  }
   function close(p, price, why) {
-    const fee = p.qty * price * S.settings.fee / 100;
-    const gross = (p.side === 'long' ? price - p.entry : p.entry - price) * p.qty;
+    const fee = p.qty * price * (p.feeRate ?? S.settings.fee / 100);
+    // a liquidation is booked as losing the whole margin (exchanges keep what's left as a penalty): conservative on paper
+    const gross = why === 'LIQ' ? -p.margin : (p.side === 'long' ? price - p.entry : p.entry - price) * p.qty;
     S.equityBase += gross - fee; S.fees += fee;
     const pnl = gross - fee - p.feesPaid;
     S.positions = S.positions.filter(x => x !== p);
@@ -482,8 +594,10 @@
     $('eq').textContent = usd(eq);
     $('eq-delta').innerHTML = `<span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${usd(d)}</span> <span class="muted">· ${(eq / S.start).toFixed(1)}x from ${usd(S.start, 0)}</span>`;
     const f = $('feed');
-    f.textContent = tr(feedOk === null ? 'LOADING' : feedOk ? 'DATA LIVE' : 'DATA OFFLINE');
-    f.className = 'badge ' + (feedOk ? 'ok' : feedOk === false ? 'err' : 'muted');
+    const stale = feedOk && (markStale || COINS.some(c => M[c] && Date.now() - M[c].markAt > 90e3));
+    f.textContent = tr(feedOk === null ? 'LOADING' : !feedOk ? 'DATA OFFLINE' : stale ? 'DATA STALE' : 'DATA LIVE');
+    f.className = 'badge ' + (feedOk && !stale ? 'ok' : feedOk === null ? 'muted' : 'err');
+    $('savewarn').hidden = !saveFailed;
 
     $('snap').innerHTML = '<tr><th>Coin</th><th>Mark</th><th>1h</th><th>4h</th><th>24h</th><th>Funding/h</th><th>OI</th><th>Exp. move</th><th>→ Lev</th><th>Bias</th><th>Max</th></tr>'
       + COINS.map(c => {
@@ -555,10 +669,12 @@
     if (r) reject(r.dataset.reject);
   });
   $('s-save').addEventListener('click', () => {
-    const roi = clamp(+$('s-roi').value || 100, 30, 150), fee = clamp(+$('s-fee').value || 0.05, 0, 1);
+    const num = (id, def) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : def; };
+    const roi = clamp(num('s-roi', 100), 30, 150), fee = clamp(num('s-fee', 0.05), 0, 1);
     S.settings.roi = roi; S.settings.fee = fee;
-    S.settings.dayLoss = clamp(+$('s-dayloss').value || 20, 5, 30);
-    S.settings.maxLosses = clamp(Math.round(+$('s-maxloss').value || 3), 2, 5);
+    S.settings.dayLoss = clamp(num('s-dayloss', 20), 5, 30);
+    S.settings.maxLosses = clamp(Math.round(num('s-maxloss', 3)), 2, 5);
+    save();
     log(`Settings: target ROI ${roi}%, taker fee ${fee}%`);
     render();
   });
@@ -576,20 +692,24 @@
   });
 
   applyLang();
+  pruneTickets(); save();  // expired tickets from an earlier visit never show again
   render();
-  scan();
+  scan().then(async () => { if (S.positions.length) { await catchUp(); monitor(); finish(); } });
   setInterval(() => { if (!document.hidden) scan(); }, 60000);
   setInterval(() => { if (!document.hidden && feedOk) { monitor(); render(); } }, 1000);
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden || !S.positions.length) return;
+    await refreshMarks(); await catchUp(); monitor(); finish();
+  });
   // between full scans, refresh mark prices every 10s so TP/SL are watched closely
+  // Mark prices every 10s while positions are open. This keeps running when the tab is hidden
+  // (browsers may slow it down); catchUp() covers anything missed.
   setInterval(async () => {
-    if (document.hidden || !feedOk || !S.positions.length) return;
-    try {
-      const mids = await info({ type: 'allMids' });
-      for (const c of COINS) if (M[c] && mids[c]) { M[c].mark = +mids[c]; M[c].mid = +mids[c]; }
-      monitor(); render();
-    } catch (e) { /* the next full scan reports problems */ }
+    if (!feedOk || !S.positions.length) return;
+    await refreshMarks();
+    monitor(); render();
   }, 10000);
-  window.__desk = { M, S: () => S, scan, approve, monitor, render, killSwitch, resume };  // for tests
+  window.__desk = { M, S: () => S, scan, approve, monitor, render, killSwitch, resume, catchUp, refreshMarks };  // for tests
 })();
 </script>
 </body>

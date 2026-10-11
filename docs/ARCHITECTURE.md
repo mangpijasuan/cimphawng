@@ -407,6 +407,9 @@ pretend money. It's linked from the Bot tab with a risk warning, and is not part
 | Kill switch | Button | Closes every paper position at market and stops all tickets until **Resume** |
 | Margin limits | 50% per trade, 70% total | Checked when proposing **and** again when approving |
 | Stale data | Market data must load | No tickets while data is offline |
+| Fresh price at approval | Price refreshed when you press Approve | Fills at the current price. Refused if prices are stale or moved more than half the stop distance since the ticket |
+| Missed exits | 1-minute candles replayed after the page was hidden or closed | A TP/SL/liquidation touched while away is still applied, worst case first |
+| Liquidation | Checked before stop and target | Booked as losing the whole margin (conservative) |
 
 ### 8.4 Path to live (owner only, not built)
 

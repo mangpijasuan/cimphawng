@@ -77,6 +77,12 @@ Every 60 seconds it:
   - A stop after **3 losses in a row**.
   - A **kill switch** that closes every paper position at market and stops new tickets until **Resume**.
 
+Paper results aim to be honest rather than flattering:
+- Approvals fill at a fresh price.
+- Exits missed while the page was closed are replayed from 1-minute candles.
+- A liquidation counts as losing the whole margin.
+- Fees use the rate in force when the trade was opened.
+
 It's an official Cimphawng feature (see section 8 of `docs/ARCHITECTURE.md`): a **paper-only learning lab**, linked from the
 **Bot** tab with a risk warning, in Zomi or English. A live version would be owner-only and never use members' money.
 
