@@ -206,7 +206,7 @@
   /* ---------- phone app view (tabs + cards), desktop stays a terminal ---------- */
   .tabbar, .ico { display: none; }
   @media (max-width: 760px) {
-    :root { --mbg: #13141f; --card: #1e2030; --card2: #2a2d42; --mgreen: #5ad67d; --mblue: #7fb8ff; --morange: #f5a524; }
+    :root { --mbg: #080e16; --card: #141f2b; --card2: #26333f; --mgreen: #5ad67d; --mblue: #7fb8ff; --morange: #f5a524; }
     html, body { background: var(--mbg); }
     body { font-family: "Poppins", system-ui, -apple-system, sans-serif; font-size: 13px; letter-spacing: 0;
            padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
@@ -217,10 +217,10 @@
              flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 10px; }
     header::-webkit-scrollbar { display: none; }
     .brand, .hs-up, .hs-dn, .hs-sum, #h-clock, .feed, .hdr-stats .lbl { display: none; }
-    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #4b2bb0;
-            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #6d4ee6; }
+    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #183b30;
+            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #2d5d4d; }
     .hdr-stats { margin: 0; flex-wrap: nowrap; gap: 10px; }
-    .hdr-stats > .chip, .hdr-stats > button { flex: none; height: 50px; padding: 0 14px; border-radius: 16px; background: #181a28;
+    .hdr-stats > .chip, .hdr-stats > button { flex: none; height: 50px; padding: 0 14px; border-radius: 16px; background: #13211d;
             border: 2px solid var(--card2); display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #fff; cursor: pointer; }
     .hdr-stats > button { font-size: 13px; }
     .hdr-stats b { margin: 0; font-weight: 600; color: #fff !important; }
@@ -301,24 +301,25 @@
     /* floating tab bar */
     .tabbar { display: flex; position: fixed; z-index: 30; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
               height: 76px; padding: 6px; border-radius: 38px;
-              background: linear-gradient(135deg, rgba(86,94,232,.93), rgba(142,122,246,.93));
+              background: linear-gradient(135deg, #162a22, #102019);
               -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
               box-shadow: 0 12px 32px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.3); }
     .tabbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
                      padding: 0; border: 0; border-radius: 32px; background: transparent; color: #fff; font-size: 11px; font-weight: 500; }
     .tabbar button:hover { background: rgba(255,255,255,.08); }
     .tabbar svg { width: 26px; height: 26px; }
-    .tabbar button.on { color: #6dff97; font-weight: 600; background: rgba(14,16,40,.45); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+    .tabbar button.on { color: #6dff97; font-weight: 600; background: rgba(29,65,48,.65); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
     table.book td { text-align: right; }
     table.book tr.ask td:first-child, table.book tr.bid td:first-child { text-align: left; padding-left: 10px; }
   }
   @media (prefers-reduced-motion: reduce) { .feed .track { animation: none; } }
 </style>
+<link rel="stylesheet" href="./ui.css">
 </head>
-<body>
+<body class="terminal">
 <header>
   <div class="logo">CIMP</div>
-  <div class="brand">x-Cimphawng // TOKEN BOT<small>CIMP · 1M UP/DOWN · SIMULATED BOOK</small></div>
+  <div class="brand">Cimphawng<small>Market research & simulation</small></div>
   <div class="hdr-stats">
     <div class="chip hs-spot" data-go="cimp"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5" stroke-linecap="round"/></svg><span class="lbl">CIMP/USD</span><b id="h-spot">–</b></div>
     <div class="hs-up"><span class="lbl">UP</span><b id="h-up">–</b></div>
@@ -334,6 +335,10 @@
 <div class="feed"><div class="tag">● LIVE FEED</div><div class="track" id="feed">booting simulation…</div></div>
 <div class="news" id="news" hidden><span class="ntag"><b id="news-tag">NEWS</b></span><span id="news-text"></span><span class="nmove" id="news-move"></span></div>
 
+<section class="workspace-heading" aria-label="Workspace overview">
+  <div><p class="workspace-kicker">CIMPHAWNG / RESEARCH WORKSPACE</p><h1 id="workspace-title">Overview</h1><p>Explore the market. Test your ideas. Build with confidence.</p></div>
+  <div class="workspace-actions"><a href="./desk.html">Perps Desk ↗</a><a href="./token/">CIMP Testnet Lab ↗</a></div>
+</section>
 <main class="grid">
   <section class="panel" id="me" data-tab="home">
     <h2>My wallet <span>pretend $100 · play money only</span><em class="live" id="me-tag">BOT OFF</em></h2>
@@ -559,11 +564,15 @@
 </main>
 <footer>Cimphawng Terminal — a hobby toy. The CIMP market and bot are a simulation running in your browser. Base DEX prices are real public data, read-only. No wallet or real money is involved. Not financial advice.</footer>
 <nav class="tabbar" id="tabbar" aria-label="Sections">
+  <a class="sidebar-brand" href="./index.html"><i>C</i>Cimphawng</a>
+  <div class="sidebar-label">WORKSPACE</div>
   <button data-go="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
   <button data-go="markets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Markets</span></button>
   <button data-go="cimp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5"/></svg><span>CIMP</span></button>
   <button data-go="bot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6"/></svg><span>Bot</span></button>
   <button data-go="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg><span>AI</span></button>
+  <a class="nav-link" href="./token/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l8 4v10l-8 4-8-4V7zM4 7l8 5 8-5M12 12v9"/></svg>CIMP Testnet Lab ↗</a>
+  <div class="sidebar-foot"><b><i></i>Simulation workspace</b>Practice with pretend funds.<br>On-chain tokens are testnet only.</div>
 </nav>
 
 
@@ -572,8 +581,8 @@
   'use strict';
 
   // ---------- constants ----------
-  const COL = { grid: '#12201f', dim: '#4f6b71', text: '#b9d3d6', green: '#39ff88', red: '#ff3b5c',
-                yellow: '#ffd23f', cyan: '#3fd8ff', orange: '#ff9f2e', white: '#e8f6f7' };
+  const COL = { grid: '#243440', dim: '#91a7b7', text: '#dce6ed', green: '#71dfb1', red: '#ff8190',
+                yellow: '#edcb8a', cyan: '#85c8ed', orange: '#e9b77c', white: '#edf5f7' };
   const ROUND = 60;          // seconds per up/down market
   const DT = 0.25;           // simulation tick (seconds)
   const SIGMA = 0.0011;      // spot vol per sqrt(second)
@@ -611,6 +620,10 @@
   // Edit the Zomi words here: left is the English text on the page, right is the Zomi.
   // {name} parts are filled in with numbers, so keep them in the Zomi text.
   const ZO = {
+    'Overview': 'Inn',
+    'CIMP simulation': 'CIMP kimawlna',
+    'Bot workspace': 'Bot nasepna',
+    'AI & system': 'AI & system',
     // header + feed
     'CIMP · 1M UP/DOWN · SIMULATED BOOK': 'CIMP · MINIT 1 UP/DOWN · KIMAWLNA',
     'MY WALLET': 'KA SUMBAWM',
@@ -848,6 +861,8 @@
     for (const l of LABELS) l.node.nodeValue = l.raw.replace(l.en, tr(l.en));
     document.documentElement.lang = LANG === 'zo' ? 'ctd' : 'en';
     $('lang').textContent = LANG === 'zo' ? 'English' : 'Zomi';
+    const titles = {home:'Overview', markets:'Markets', cimp:'CIMP simulation', bot:'Bot workspace', ai:'AI & system'};
+    $('workspace-title').textContent = tr(titles[document.body.dataset.tab || 'home']);
   }
   applyLang();
 
@@ -1739,7 +1754,8 @@
   function setTab(t, scroll) {
     if (!TABS.includes(t)) t = 'home';
     document.body.dataset.tab = t;
-    document.querySelectorAll('.tabbar [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === t));
+    $('workspace-title').textContent = tr({home:'Overview', markets:'Markets', cimp:'CIMP simulation', bot:'Bot workspace', ai:'AI & system'}[t]);
+    document.querySelectorAll('.tabbar [data-go]').forEach(b => { b.classList.toggle('on', b.dataset.go === t); b.setAttribute('aria-current', b.dataset.go === t ? 'page' : 'false'); });
     try { localStorage.setItem('cimphawng-tab', t); } catch (e) { /* ignore */ }
     if (scroll && getComputedStyle($('tabbar')).display !== 'none') scrollTo(0, 0);
     drawMe(); drawDex(); sysPoll();
