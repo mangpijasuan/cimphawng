@@ -9,7 +9,7 @@ async def test_stats_shape_and_counts(app, signed_in):
     await signed_in.post("/api/paper/swap", content="x", headers={"content-type": "text/plain"})  # 415
     j = (await signed_in.get("/api/stats")).json()
     assert j["community"] == {"members": 1, "active_24h": 1, "paper_trades_total": 1,
-                              "paper_trades_today": 1, "paper_trades_last_hour": 1}
+                              "paper_trades_today": 1, "paper_trades_last_hour": 1, "bots_on": 0}
     assert j["api"]["requests_total"] == 4  # nonce, verify, swap, rejected post (this request counts after it answers)
     assert j["api"]["by_status"]["4xx"] >= 1  # the rejected form post is counted
     assert len(j["api"]["per_minute"]) == 30 and j["api"]["per_minute"][-1]["requests"] == 4

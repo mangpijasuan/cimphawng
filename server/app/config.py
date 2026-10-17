@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     price_refresh_s: int = 20
     price_max_age_s: int = 120
 
+    # Paper bots: how often the runner looks for a newly closed 1-hour candle
+    bots_enabled: bool = True
+    bot_check_s: int = 60
+
     # System monitor: how long database figures are cached
     stats_cache_s: int = 5
 

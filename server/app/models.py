@@ -94,5 +94,25 @@ class PaperTrade(Base):
     price_out_usd: Mapped[Decimal] = mapped_column(Amount)
     fee_usd: Mapped[Decimal] = mapped_column(Amount)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    source: Mapped[str] = mapped_column(String(8), default="manual", server_default="manual")  # "manual" or "bot"
     # A reset hides a member's trades from their history but keeps them, so community totals don't drop.
     archived: Mapped[bool] = mapped_column(default=False)
+
+
+class PaperBot(Base):
+    """A member's paper bot: one strategy on one coin, trading their paper wallet on closed 1-hour candles."""
+
+    __tablename__ = "paper_bots"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    strategy: Mapped[str] = mapped_column(String(16))  # "ma" or "rsi", the same rules as the web app's backtest
+    asset: Mapped[str] = mapped_column(String(16))  # the coin it trades against USDC
+    size_pct: Mapped[int] = mapped_column(Integer, default=100)  # share of the USDC balance a buy uses
+    enabled: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # The newest closed candle (its open time, Unix seconds) the bot has acted on; each candle is used once.
+    last_candle_at: Mapped[int] = mapped_column(Integer, default=0)
+    last_signal: Mapped[str | None] = mapped_column(String(8))  # "in", "out" or "hold"
+    last_run_at: Mapped[datetime | None]
+    last_note: Mapped[str | None] = mapped_column(String(200))  # what it did last, or why it couldn't

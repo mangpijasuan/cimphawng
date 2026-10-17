@@ -2,6 +2,8 @@
 #    uv pip compile pyproject.toml --python-version 3.12 -o requirements.txt
 aiosqlite==0.22.1
     # via cimphawng-server (pyproject.toml)
+alembic==1.20.0
+    # via cimphawng-server (pyproject.toml)
 annotated-doc==0.0.5
     # via fastapi
 annotated-types==0.8.0
@@ -76,6 +78,10 @@ idna==3.20
     # via
     #   anyio
     #   httpx
+mako==1.4.3
+    # via alembic
+markupsafe==3.0.4
+    # via mako
 parsimonious==0.10.0
     # via eth-abi
 py-ecc==8.0.0
@@ -105,13 +111,16 @@ rlp==5.0.0
     #   eth-account
     #   eth-rlp
 sqlalchemy==2.1.1
-    # via cimphawng-server (pyproject.toml)
+    # via
+    #   cimphawng-server (pyproject.toml)
+    #   alembic
 starlette==1.7.0
     # via fastapi
 toolz==1.1.0
     # via cytoolz
 typing-extensions==4.16.0
     # via
+    #   alembic
     #   anyio
     #   eth-typing
     #   fastapi
