@@ -12,3 +12,7 @@ infra/.env
 # Token tooling
 node_modules/
 token/coverage/
+
+# Generated independent hosted assets
+/hosted/public/
+/hosted/.wrangler/

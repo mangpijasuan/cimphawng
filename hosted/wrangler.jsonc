@@ -1,0 +1,8 @@
+{
+ "name":"cimphawng-paper-api",
+ "main":"worker.mjs",
+ "compatibility_date":"2026-05-15",
+ "assets":{"directory":"./public","binding":"ASSETS","run_worker_first":["/api/*"]},
+ "d1_databases":[{"binding":"DB","database_name":"cimphawng-paper","database_id":"REPLACE_WITH_YOUR_DATABASE_ID","migrations_dir":"./drizzle"}],
+ "vars":{"SITE_ORIGIN":"https://cimphawng-lab-preview.neat-tetra-8078.chatgpt.site"}
+}
