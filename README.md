@@ -183,3 +183,18 @@ It's a single file with no build step:
 - Open `index.html` in any browser, or
 - Serve it: `python3 -m http.server` then visit http://localhost:8000, or
 - Host it free with GitHub Pages (Settings → Pages → deploy from branch, root folder).
+
+## CIMP Testnet Lab
+
+Open [token/](token/) from the Home wallet card to deploy or load a **Cimphawng Test Token**
+on **Base Sepolia (chain 84532)**. This is a separate experimental ERC-20 with a provisional
+fixed supply of 1,000,000 test CIMP, minted once to the deploying wallet. The contract blocks
+mainnet deployment. No token is deployed just by opening the page or merging this code.
+
+The lab checks the selected contract's runtime bytecode and supply before showing its balance
+or enabling transfers. Deployment and transfers require the user's own browser wallet approval
+and Base Sepolia test ETH for gas. It never asks for a private key or seed phrase.
+
+**Simulation balances, paper balances, and simulated bot profits cannot be redeemed for test tokens.**
+No price, liquidity pool, rewards entitlement, or mainnet tokenomics is introduced.
+See [the deployment guide](docs/CIMP-TESTNET.md) for testing, deployment, and verification.

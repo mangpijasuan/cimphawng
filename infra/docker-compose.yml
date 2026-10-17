@@ -48,6 +48,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ../index.html:/srv/web/index.html:ro
       - ../desk.html:/srv/web/desk.html:ro
+      - ../token/index.html:/srv/web/token/index.html:ro
+      - ../token/app.js:/srv/web/token/app.js:ro
+      - ../token/web:/srv/web/token/web:ro
+      - ../docs/CIMP-TESTNET.md:/srv/web/docs/CIMP-TESTNET.md:ro
       - caddy_data:/data
       - caddy_config:/config
 
