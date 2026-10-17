@@ -75,7 +75,9 @@ try {
   await page.setViewportSize({width:1440,height:1000});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.goto(base+'/index.html');
-  assert.equal(await page.locator('a[href="./token/"]').count(),1);
+  await page.locator('a[href="./token/"]').first().click();
+  await page.waitForURL(base+'/token/');
+  assert.equal(await page.locator('h1').textContent(),'CIMP Testnet Lab');
   assert.deepEqual(errors,[]);
   console.log('Browser checks passed: no-wallet state, deployment, exact-bytecode loading, balance, transfer, insufficient funds, mismatched contract, wrong network, reconnect, persisted selection, mobile/desktop layout, terminal link.');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));await raw.disconnect();}

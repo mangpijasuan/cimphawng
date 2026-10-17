@@ -47,6 +47,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ../index.html:/srv/web/index.html:ro
+      - ../ui.css:/srv/web/ui.css:ro
       - ../desk.html:/srv/web/desk.html:ro
       - ../token/index.html:/srv/web/token/index.html:ro
       - ../token/app.js:/srv/web/token/app.js:ro
