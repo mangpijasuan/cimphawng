@@ -1,0 +1,31 @@
+name: CIMP testnet tests
+on:
+  pull_request:
+    paths: ["token/**", "index.html", "infra/docker-compose.yml", ".github/workflows/token-tests.yml"]
+  push:
+    branches: [main, "claude/hobby-project-app-webapp-nmtkai"]
+    paths: ["token/**", "index.html", "infra/docker-compose.yml", ".github/workflows/token-tests.yml"]
+permissions:
+  contents: read
+concurrency:
+  group: cimp-tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: token
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: token/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Verify committed browser artifacts match source
+        run: git diff --exit-code -- web/
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser

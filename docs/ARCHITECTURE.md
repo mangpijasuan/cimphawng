@@ -455,5 +455,9 @@ Members never get a live version. For the community it stays a paper learning la
 | DEXs and quotes | Direct Uniswap/Aerodrome contracts, or an aggregator (0x, 1inch, Odos) | Aggregator for best prices on member swaps. Direct pool reads for data |
 | RPC provider | Alchemy, QuickNode, Infura or public RPC | Start on a free tier, and add a second provider as backup |
 | Starting token list | e.g. ETH, USDC, cbBTC | Start small and review before adding tokens |
-| CIMP | Stays a pretend token, or becomes a real on-chain token | Keep it pretend for now. A real token is a separate project with its own legal and security questions |
+| CIMP mainnet | Purpose, supply, distribution, and launch remain undecided | Keep the terminal simulated. A separate Base Sepolia test token lab is implemented; see [CIMP-TESTNET.md](CIMP-TESTNET.md). No mainnet launch or paper balance conversion |
 | Domain purchase | Register cimphawng.com (and .us if eligible) | Register soon so the name is secured |
+
+## 11. CIMP Testnet Lab
+
+`token/` is a separate static page backed by a fixed-supply OpenZeppelin ERC-20. It uses only Base Sepolia in the browser; the constructor also allows local development chain IDs 31337 and 1337. Wallet approvals happen in the user’s wallet. The compiled artifact, runtime bytecode, and explorer verification input are built from pinned dependencies. Contract selection is verified against the exact runtime artifact and total supply. No API custody, real trading, pool, or token distribution service is added. See [CIMP-TESTNET.md](CIMP-TESTNET.md).
