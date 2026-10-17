@@ -117,7 +117,7 @@
   .pp-cols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
   .pb-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
   .pb-row > span { width: 72px; flex: none; }
-  .pb-row .tfs { margin: 0; }
+  #pbot .pb-row .tfs { margin: 0; }  /* ui.css gives .tfs a bottom margin; rows here line up with their label */
   #pb-rule { margin-top: 8px; }
   #pb-go { margin-top: 10px; }
   .pp-safety { border: 1px solid #1f4a2e; background: rgba(57,255,136,.06); color: var(--text); padding: 8px 10px; margin: 10px 0; font-size: 11px; }
@@ -469,6 +469,7 @@
     <h2>My paper bot <span>runs on the server · pretend money</span><em class="live" id="pb-status">…</em></h2>
     <div id="pb-off" class="muted" hidden>Paper bots start once cimphawng.com is live on the Hetzner server.</div>
     <div id="pb-signin" class="muted" hidden>Sign in with your wallet in Paper trading (Home tab) to run your own bot.</div>
+    <div id="pb-none" class="muted" hidden>This server doesn't run paper bots yet. They run on the Python server (cimphawng.com on Hetzner).</div>
     <div id="pb-app" hidden>
       <div class="muted">Your bot follows one rule on closed 1-hour candles and trades your paper USDC at real Base prices. It keeps running when this page is closed.</div>
       <div class="pb-row"><span class="muted">STRATEGY</span><div class="tfs" id="pb-strat"></div></div>
@@ -718,6 +719,8 @@
     'runs on the server · pretend money': 'server tungah a kizang · kimawlna sum',
     'Paper bots start once cimphawng.com is live on the Hetzner server.':
       'cimphawng.com Hetzner server tungah a kipat ciangin kimawlna bot te kipan ding hi.',
+    "This server doesn't run paper bots yet. They run on the Python server (cimphawng.com on Hetzner).":
+      'Hih server in kimawlna bot a zang nai lo hi. Python server (Hetzner tungah cimphawng.com) tungah a kizang hi.',
     'Sign in with your wallet in Paper trading (Home tab) to run your own bot.':
       'Na bot mahmah zat nadingin Kimawlna lei-zuak (Home tab) ah na sumbawm tawh sign in in.',
     'Your bot follows one rule on closed 1-hour candles and trades your paper USDC at real Base prices. It keeps running when this page is closed.':
@@ -1733,7 +1736,8 @@
 
   // ---------- my paper bot (runs on the server, trades the member's paper wallet) ----------
   // pick = the choices on screen; they follow the server until the member changes one
-  const PB = { data: null, pick: null, busy: false, loading: false, gen: 0, triedAt: 0 };
+  // missing: this server has no /api/bot (e.g. the hosted preview backend), so the panel says so instead of retrying
+  const PB = { data: null, pick: null, busy: false, loading: false, gen: 0, triedAt: 0, missing: false };
   const PB_SIZES = [25, 50, 100];
   const PB_WANT = { in: 'be in the coin', out: 'be out (USDC)', hold: 'no change' };
   async function pbLoad() {
@@ -1746,6 +1750,7 @@
       if (gen === PB.gen) PB.data = d;  // drop it if the member changed the bot meanwhile
     } catch (e) {
       if (e.status === 401) PB.data = null;
+      if (e.status === 404) PB.missing = true;
     } finally { PB.loading = false; renderBot(); }
   }
   function pbNote(n) {
@@ -1780,11 +1785,13 @@
     const on = P.online && P.user;
     $('pb-off').hidden = P.online;
     $('pb-signin').hidden = !P.online || !!P.user;
-    $('pb-app').hidden = !on || !PB.data;
+    $('pb-none').hidden = !on || !PB.missing;
+    $('pb-app').hidden = !on || !PB.data || PB.missing;
     const st = $('pb-status'), b = PB.data && PB.data.bot, running = !!(b && b.enabled);
     st.textContent = !P.online ? tr('OFFLINE') : running ? '● ' + tr('Running') : tr('PAPER');
     st.classList.toggle('err', !P.online);
     if (!on) { PB.data = null; PB.pick = null; return; }
+    if (PB.missing) return;
     if (!PB.data) { if (Date.now() - PB.triedAt > 10000) pbLoad(); return; }  // at most every 10s after a failure
     const d = PB.data, pick = pbPick(), strats = d.strategies || { ma: 'MA cross', rsi: 'RSI 30/70' };
     const btn = (attr, v, label, cur) => `<button data-${attr}="${esc(v)}" class="${v === cur ? 'on' : ''}">${esc(label)}</button>`;
@@ -1823,7 +1830,7 @@
     const changed = !!PB.pick && !!b && ['strategy', 'asset', 'size_pct'].some(k => PB.pick[k] !== b[k]);
     pbSave(!running || changed);
   });
-  setInterval(() => { if (P.user && !document.hidden && shown('pb-status')) pbLoad(); }, 30000);
+  setInterval(() => { if (P.user && !PB.missing && !document.hidden && shown('pb-status')) pbLoad(); }, 30000);
 
   // ---------- system monitor (real numbers from /api/stats) ----------
   // state: 'loading' (nothing yet) | 'live' | 'error' (stats request failed while the server answers health checks)
