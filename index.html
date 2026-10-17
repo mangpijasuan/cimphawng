@@ -1591,7 +1591,8 @@
       const [address] = await eth.request({ method: 'eth_requestAccounts' });
       P.pendingAddress = address;
       if (attempt !== P.gen) throw new Error('Wallet changed. Please sign in again.');
-      const n = await api('/auth/nonce?address=' + encodeURIComponent(address));
+      const chainId = parseInt(await eth.request({ method: 'eth_chainId' }), 16);
+      const n = await api('/auth/nonce?address=' + encodeURIComponent(address) + '&chain_id=' + chainId);
       const hex = '0x' + Array.from(new TextEncoder().encode(n.message), b => b.toString(16).padStart(2, '0')).join('');
       const signature = await eth.request({ method: 'personal_sign', params: [hex, address] });
       if (attempt !== P.gen) throw new Error('Wallet changed. Please sign in again.');

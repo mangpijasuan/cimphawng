@@ -51,8 +51,10 @@ async function dispatch(request,db,{origin,now,fetcher,clock}){
  if(path==='/api/auth/nonce'&&!write){
   await rate(db,'nonce:'+ip,now,20);
   let address;try{address=getAddress(url.searchParams.get('address')||'');}catch{fail(400,'Invalid wallet address.');}
+  const chain=Number(url.searchParams.get('chain_id')||84532);
+  if(![1,8453,84532,11155111].includes(chain))fail(400,'Use Ethereum, Base, Base Sepolia or Ethereum Sepolia for wallet sign-in.');
   const nonce=random(),expires=now+600000;
-  const message=`${new URL(origin).host} wants you to sign in with your Ethereum account:\n${address}\n\nSign in to Cimphawng paper trading. Free message signature only. No transaction or token approval.\n\nURI: ${origin}\nVersion: 1\nChain ID: 84532\nNonce: ${nonce}\nIssued At: ${new Date(now).toISOString()}\nExpiration Time: ${new Date(expires).toISOString()}`;
+  const message=`${new URL(origin).host} wants you to sign in with your Ethereum account:\n${address}\n\nSign in to Cimphawng paper trading. Free message signature only. No transaction or token approval.\n\nURI: ${origin}\nVersion: 1\nChain ID: ${chain}\nNonce: ${nonce}\nIssued At: ${new Date(now).toISOString()}\nExpiration Time: ${new Date(expires).toISOString()}`;
   await db.batch([db.prepare('DELETE FROM auth_nonces WHERE expires<?').bind(now),db.prepare('DELETE FROM sessions WHERE expires<?').bind(now),db.prepare('DELETE FROM request_limits WHERE expires<?').bind(now),db.prepare('DELETE FROM api_metrics WHERE minute<?').bind(Math.floor(now/60000)-60),db.prepare('INSERT INTO auth_nonces(nonce,address,message,expires,used) VALUES(?,?,?,?,0)').bind(nonce,address.toLowerCase(),message,expires)]);
   return json({nonce,message});
  }

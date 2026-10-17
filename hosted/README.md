@@ -16,7 +16,7 @@ npm test
 
 No npm installation is needed for these tests: the exact ethers 6.15 browser-compatible ESM build
 is vendored in `lib/ethers-server.mjs`. Its MIT license is in `../token/web/ethers-LICENSE.md`.
-Tests use real SQLite and ephemeral signing wallets. The 11 tests cover single-use/expired/wrong
+Tests use real SQLite and ephemeral signing wallets. The 12 tests cover single-use/expired/wrong
 signatures, secure session flags, persisted account isolation, concurrent spending and reset conflicts,
 stale feeds, bad input, logout, rate limiting, and oversized requests.
 
@@ -44,6 +44,7 @@ is deliberately not usable without choosing a real database and origin.
 
 ## Storage and safeguards
 
+Sign-in messages use the selected Ethereum, Base, Base Sepolia or Ethereum Sepolia wallet network.
 Nonces are consumed atomically before signature verification and expire after ten minutes. Session
 cookies are HttpOnly, Secure and SameSite=Lax; only token hashes are stored. Each wallet has its own
 persistent portfolio. Wallet ownership does not grant platform administration. Contract-wallet EIP-1271
