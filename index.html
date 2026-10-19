@@ -321,7 +321,7 @@
 </style>
 <link rel="stylesheet" href="./ui.css">
 </head>
-<body class="terminal">
+<body class="terminal"><aside style="margin:12px;padding:14px 20px;border:1px solid #234354;border-radius:16px;background:#0d2028;color:#c9e9e0;font:14px/1.6 system-ui"><strong>Private beta · Learn with paper funds.</strong> Guest demo stays in this browser. Wallet sign-in saves your pretend $100 portfolio. Token Lab uses testnet tokens. Real trading and scheduled bots are unavailable.<nav aria-label="Beta help"><a href="/guide">Getting started &amp; privacy</a> · <a href="/account">Your account</a> · <a href="/status">Service status</a></nav></aside>
 <header>
   <div class="logo">CIMP</div>
   <div class="brand">Cimphawng<small>Market research & simulation</small></div>
@@ -469,7 +469,7 @@
     <h2>My paper bot <span>runs on the server · pretend money</span><em class="live" id="pb-status">…</em></h2>
     <div id="pb-off" class="muted" hidden>Paper bots start once cimphawng.com is live on the Hetzner server.</div>
     <div id="pb-signin" class="muted" hidden>Sign in with your wallet in Paper trading (Home tab) to run your own bot.</div>
-    <div id="pb-none" class="muted" hidden>This server doesn't run paper bots yet. They run on the Python server (cimphawng.com on Hetzner).</div>
+    <div id="pb-none" class="muted" hidden>Scheduled paper bots are unavailable on this hosted release. Manual paper trading remains available. No real funds are traded.</div>
     <div id="pb-app" hidden>
       <div class="muted">Your bot follows one rule on closed 1-hour candles and trades your paper USDC at real Base prices. It keeps running when this page is closed.</div>
       <div class="pb-row"><span class="muted">STRATEGY</span><div class="tfs" id="pb-strat"></div></div>
@@ -719,7 +719,7 @@
     'runs on the server · pretend money': 'server tungah a kizang · kimawlna sum',
     'Paper bots start once cimphawng.com is live on the Hetzner server.':
       'cimphawng.com Hetzner server tungah a kipat ciangin kimawlna bot te kipan ding hi.',
-    "This server doesn't run paper bots yet. They run on the Python server (cimphawng.com on Hetzner).":
+    "Scheduled paper bots are unavailable on this hosted release. Manual paper trading remains available. No real funds are traded.":
       'Hih server in kimawlna bot a zang nai lo hi. Python server (Hetzner tungah cimphawng.com) tungah a kizang hi.',
     'Sign in with your wallet in Paper trading (Home tab) to run your own bot.':
       'Na bot mahmah zat nadingin Kimawlna lei-zuak (Home tab) ah na sumbawm tawh sign in in.',
@@ -1226,7 +1226,7 @@
     const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 12000);
     try {
       const res = await fetch(url, { signal: ctl.signal, headers: { Accept: 'application/json' } });
-      if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
+      if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; if (j?.request_id) e.message += ' (request ' + j.request_id + ')'; throw e; }
       return await res.json();
     } finally { clearTimeout(timer); }
   }
@@ -1611,15 +1611,16 @@
   // gen goes up on every change the member makes, so an older background refresh can't overwrite it
   const P = { online: false, user: null, pf: null, trades: [], busy: false, gen: 0 };
 
-  async function api(path, body) {
+  async function api(path, body, key) {
     const opts = { credentials: 'same-origin' };
     if (body !== undefined) Object.assign(opts, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (key) opts.headers['Idempotency-Key'] = key;
     const res = await fetch('/api' + path, opts);
     let j = null;
     try { j = await res.json(); } catch (e) { /* not JSON */ }
     if (!res.ok) {
       const e = new Error(j && typeof j.detail === 'string' ? j.detail : 'Error ' + res.status);
-      e.status = res.status;
+      e.status = res.status; if (j?.request_id) e.message += ' (request ' + j.request_id + ')';
       throw e;
     }
     return j;
@@ -1632,10 +1633,11 @@
   const ppNum = (v, dp) => { const n = +v; return !isFinite(n) ? '–' : n >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : n.toFixed(dp ?? (n >= 1 ? 4 : 6)).replace(/\.?0+$/, '') || '0'; };
 
   async function ppInit() {
-    try { await api('/health'); P.online = true; } catch (e) { P.online = false; }
+    try { const h = await api('/health'); P.features = h.features || {}; P.online = true; } catch (e) { P.online = false; }
     if (P.online) {
       try { P.user = await api('/me'); await ppLoad(); } catch (e) { Object.assign(P, { user: null, pf: null, trades: [] }); }
     }
+    if (P.user) { try { const pending = JSON.parse(sessionStorage.getItem('cimp-pending:' + P.user.address.toLowerCase()) || 'null'); if (pending) { if (pending.path === '/paper/swap') { $('pp-from').value = pending.data.from_asset; $('pp-to').value = pending.data.to_asset; $('pp-amt').value = pending.data.amount; } ppMsg('An earlier paper request is unresolved. Retry the same action to safely check its result.'); } } catch { /* handled before mutation */ } }
     renderPaper();
   }
   async function ppLoad() {
@@ -1688,17 +1690,38 @@
       ? tr('You get about {out} {to} (0.3% fee)', { out: ppNum(amt * px(f) / px(t) * 0.997), to: t }) : '';
   }
 
+  async function paperOperation(path, data) {
+    if (!P.features?.idempotency) return api(path, data);
+    const address = P.user.address, storage = 'cimp-pending:' + address.toLowerCase();
+    let pending;
+    try { pending = JSON.parse(sessionStorage.getItem(storage) || 'null'); }
+    catch { throw new Error('Enable session storage to place paper trades safely.'); }
+    if (pending && (pending.path !== path || JSON.stringify(pending.data) !== JSON.stringify(data)))
+      throw new Error('An earlier request is unresolved. Retry the same action and amount before placing another trade or reset.');
+    pending ||= {path, data, key: crypto.randomUUID()};
+    sessionStorage.setItem(storage, JSON.stringify(pending));
+    try {
+      const result = await api(path, data, pending.key);
+      sessionStorage.removeItem(storage);
+      if (P.user?.address !== address) throw new Error('Wallet changed. Sign in again to refresh your portfolio.');
+      return result;
+    } catch (e) {
+      if ([400,401,403,415,422].includes(e.status)) sessionStorage.removeItem(storage);
+      else e.message += ' Retry the same action and amount to safely check its result.';
+      throw e;
+    }
+  }
   async function ppSwap() {
     if (P.busy) return;
     const from_asset = $('pp-from').value, to_asset = $('pp-to').value, amount = $('pp-amt').value.trim();
     if (!(+amount > 0)) { ppMsg(tr('Enter an amount.'), 'err'); return; }
     P.busy = true;
     try {
-      const r = await api('/paper/swap', { from_asset, to_asset, amount });
+      const r = await paperOperation('/paper/swap', { from_asset, to_asset, amount });
       P.gen++;
       P.pf = r.portfolio;
-      P.trades = (await api('/paper/trades?limit=6')).trades;
       $('pp-amt').value = '';
+      try { P.trades = (await api('/paper/trades?limit=6')).trades; } catch { P.trades = []; }
       ppMsg(tr('Swapped {a} {f} → {b} {t}', { a: ppNum(r.trade.amount_in), f: from_asset, b: ppNum(r.trade.amount_out), t: to_asset }), 'ok');
     } catch (e) {
       ppMsg(e.message, 'err');
@@ -1741,6 +1764,7 @@
   const PB_SIZES = [25, 50, 100];
   const PB_WANT = { in: 'be in the coin', out: 'be out (USDC)', hold: 'no change' };
   async function pbLoad() {
+    if (P.features?.paper_bots === false) { PB.missing = true; renderBot(); return; }
     if (!P.user || PB.loading) return;
     const gen = PB.gen;
     PB.loading = true;
@@ -1750,7 +1774,7 @@
       if (gen === PB.gen) PB.data = d;  // drop it if the member changed the bot meanwhile
     } catch (e) {
       if (e.status === 401) PB.data = null;
-      if (e.status === 404) PB.missing = true;
+      if ([404,501].includes(e.status)) PB.missing = true;
     } finally { PB.loading = false; renderBot(); }
   }
   function pbNote(n) {
@@ -2428,9 +2452,11 @@
     ppMsg(''); renderPaper();
   });
   $('pp-reset').addEventListener('click', async () => {
+    if (P.busy || !P.user) return;
     if (!confirm(tr('Reset your paper account to 100 USDC?'))) return;
-    try { P.gen++; P.pf = await api('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
-    renderPaper();
+    P.busy = true;
+    try { P.gen++; P.pf = await paperOperation('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
+    P.busy = false; renderPaper();
   });
   // keep the portfolio's values fresh while signed in
   setInterval(async () => {

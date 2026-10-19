@@ -16,7 +16,7 @@ npm test
 
 No npm installation is needed for these tests: the exact ethers 6.15 browser-compatible ESM build
 is vendored in `lib/ethers-server.mjs`. Its MIT license is in `../token/web/ethers-LICENSE.md`.
-Tests use real SQLite and ephemeral signing wallets. The 12 tests cover single-use/expired/wrong
+Tests use real SQLite and ephemeral signing wallets. The 21 tests cover single-use/expired/wrong
 signatures, secure session flags, persisted account isolation, concurrent spending and reset conflicts,
 stale feeds, bad input, logout, rate limiting, and oversized requests.
 
@@ -36,7 +36,7 @@ independent Cloudflare account.
 1. Run `node prepare-assets.mjs` from `hosted/`.
 2. Provision a D1 database and replace the explicit placeholder in `wrangler.jsonc`.
 3. Set `vars.SITE_ORIGIN` to the exact intended HTTPS origin. It defines the SIWE domain and write-origin guard.
-4. Apply `drizzle/0000_spotty_forge.sql` with the normal Wrangler D1 migration mechanism.
+4. Apply all pending `drizzle/*.sql` migrations, in order, using the normal Wrangler D1 migration mechanism. Never edit an applied migration.
 5. Deploy through your Cloudflare account with Wrangler. Do not commit credentials.
 
 No deployment command has been run against an independent Cloudflare account. The placeholder config
@@ -62,3 +62,16 @@ latency, not wallet records. Worker CPU, memory and uptime are marked unavailabl
 
 The platform checklist is at `/setup.html`. Mainnet token purpose, distribution and launch remain
 undecided; `docs/CIMP-UTILITY-PROPOSAL.md` is a draft for review.
+
+
+## Private beta safeguards (0.2.0-beta.1)
+
+The hosted adapter now requires an `Idempotency-Key` (16–80 alphanumeric, underscore or hyphen characters) for each paper swap/reset. Retry an uncertain operation with its original key and exact JSON values. Replays return the original fill and current portfolio. Reusing a key with a different payload returns 409. Receipts remain until account deletion. The browser retains an unresolved request in session storage scoped to the wallet; keep the tab open until resolved. Changing tabs/devices creates a separate intent, so review history first.
+
+`GET /api/release` reports the content fingerprint and supported features. `GET /api/health` checks core database connectivity; `GET /api/ready` also checks live prices and returns 503 when degraded. `GET /api/bot` explicitly returns 501; scheduled Python bots do not run on the hosted Worker.
+
+Account routes provide paginated private exports, logout of all sessions and deletion of active paper records. Logout-all/deletion require a signature within ten minutes. Deletion requires the wallet address typed by the member. A reset only archives history. Provider backups are separate and may retain copies.
+
+The general API limit is 180 requests/IP/minute (excluding health/release), nonce 20/IP/minute, verification 40/IP/minute, paper mutations 60/wallet/minute, exports 30/wallet/minute. The shared price refresh lease bounds upstream calls. These limits are safeguards, not a DDoS or hosting-spend guarantee. Monitoring and platform budget controls still need an owner.
+
+See [launch operations](../docs/LAUNCH-READINESS.md) for release, rollback, recovery and remaining public-launch gates. The Python server has a different feature set; do not assume these hosted safeguards are implemented there.
