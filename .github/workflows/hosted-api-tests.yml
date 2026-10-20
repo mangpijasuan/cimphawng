@@ -20,5 +20,6 @@ jobs:
           node-version: '24'
       - run: node hosted/scripts/release.mjs --check
       - run: node --test hosted/tests/backend.test.mjs
+      - run: node hosted/scripts/ship-check.mjs
       - run: node --check hosted/worker.mjs
       - run: node hosted/prepare-assets.mjs

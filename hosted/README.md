@@ -12,6 +12,7 @@ Use Node >=22.13 (Node 24 recommended for the built-in SQLite test adapter):
 ```sh
 cd hosted
 npm test
+npm run ship-check   # fingerprint + tests + invited-beta API journey
 ```
 
 No npm installation is needed for these tests: the exact ethers 6.15 browser-compatible ESM build
