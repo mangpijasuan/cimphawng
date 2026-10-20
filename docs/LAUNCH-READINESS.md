@@ -13,14 +13,27 @@ The deployed audience remains owner-private. No mainnet token, real trading, pai
 - Immutable migration 0001 adds operation receipts, feed diagnostics and session creation time; 0000 remains unchanged.
 - 21 SQLite backend tests, including concurrency, stale feeds, export pagination and a fixture backup/restore integrity drill.
 - Compiled Site Worker integration checks cover the new routes/assets plus real signature verification, a session and a fixture-priced paper trade against ephemeral D1.
+- Automated ship gate: `node hosted/scripts/ship-check.mjs` (or `npm run ship-check` in `hosted/`) re-checks the release fingerprint, the 21-test suite, beta assets, and an invited-member API journey (sign-in → trade → idempotent retry → export → logout → delete).
 
-Browser/device QA was unavailable in the build environment. Fixture restoration is not evidence of a hosted D1 recovery rehearsal.
+## Ship verification log
+
+| When | What | Result |
+| --- | --- | --- |
+| 2026-10-20 | `node hosted/scripts/release.mjs --check` | Fingerprint `575d324442ec…688d4b` matches `hosted/lib/release.mjs` |
+| 2026-10-20 | `npm test` in `hosted/` | 21/21 pass |
+| 2026-10-20 | `node hosted/scripts/ship-check.mjs` | Pass (includes invited-beta API journey) |
+| 2026-10-20 | Live Site `GET /api/health` (unauthenticated curl) | **401 Sign in required** — audience still owner-private; external monitors need an approved access method |
+| 2026-10-20 | Local beta page nav (`serve-preview` + Worker aliases for `/guide` `/account` `/status`) | Pass — clean URLs load; static guide/account/status/home surfaces verified in browser |
+| 2026-10-20 | Browser/device wallet prompts | Still owner/device QA (not automatable without a connected EOA extension on supported devices) |
+| 2026-10-20 | Hosted D1 restore rehearsal | Still pending (local fixture restore only) |
+
+**Private beta ship decision:** code and automated gates are green for owner-private use. Do not widen audience until the public-launch owner gates below are closed.
 
 ## Source and release verification
 
 The repository's default branch is `claude/hobby-project-app-webapp-nmtkai`; `main` is older. Use the validated release branch/PR commit, not an assumed `main`.
 
-From the repository root, run `node hosted/scripts/release.mjs --check`. After intentionally changing any release input, regenerate with `node hosted/scripts/release.mjs`, test and review the diff. The Site uses the same script as `scripts/release.mjs`; the input mapping normalizes the Site's public assets and the repository's root assets. `GET /api/release` must match the generated `hosted/lib/release.mjs` fingerprint. This checks core API/schema/migrations and listed application assets, not the entire hosting infrastructure.
+From the repository root, run `node hosted/scripts/release.mjs --check`. After intentionally changing any release input, regenerate with `node hosted/scripts/release.mjs`, test and review the diff. Before cutting a build, also run `node hosted/scripts/ship-check.mjs`. The Site uses the same release script as `scripts/release.mjs`; the input mapping normalizes the Site's public assets and the repository's root assets. `GET /api/release` must match the generated `hosted/lib/release.mjs` fingerprint. This checks core API/schema/migrations and listed application assets, not the entire hosting infrastructure.
 
 Native Site versions retain exact source and deployment provenance. Publish only the tested source archive and preserve private audience. Do not copy credentials into Git, logs or issue reports.
 
@@ -40,13 +53,29 @@ Perform a non-production rehearsal: restore a provider-supported snapshot/time-t
 
 The automated test restores a generated local fixture only. It does not back up, alter or restore the live account database. Provider backup controls are not exposed by this app.
 
+### Owner fill-in (copy into an ops note; do not commit secrets)
+
+```
+Database id / name:
+Backup retention / available restore points:
+Recovery owner:
+RPO / RTO:
+Rehearsal date / restore-point timestamp:
+Restored account/trade/receipt counts:
+Integrity + FK check result:
+Elapsed recovery time:
+Cleanup of copied personal data completed (yes/no):
+```
+
 ## Public launch gates still open
 
-- Test a real EOA wallet sign-in, cancel/reject flows, network/account changes, refresh after timeout and mobile wallet browser on supported devices. Verify accessibility with keyboard/screen reader and real viewport checks.
-- Run a small invited beta through demo → sign-in → trade → retry → export → sign out → deletion with explicit test accounts; record failures and resolve them. Current Site access has not been widened or invitations sent.
-- Assign an operations owner and configure an external monitor for core health and price readiness (private monitor needs an approved supported access method). Alert only after sustained failures and test notification delivery. No external alert destination has been configured.
-- Configure and verify hosting spend/error thresholds in the actual provider account. Request limits alone do not cap billing.
-- Complete the hosted backup/restore rehearsal and choose recovery objectives.
-- Owner/legal review of beta terms/privacy, lawful price-data use, provider retention, support ownership and any applicable public launch requirements. Current documents are drafts, not legal approval.
-- Select production domain and sharing policy; validate HTTPS, SIWE origin and redirects there. Audience changes require an explicit decision.
-- Keep mainnet token launch separate: utility, distribution, contract review and user-owned deployment are not completed by this paper-trading release.
+Use this checklist. Items marked **automated** are covered by `ship-check` / CI; the rest need the hosting owner.
+
+- [ ] **Device wallet QA (owner):** real EOA sign-in, cancel/reject, network/account changes, refresh after timeout, mobile wallet browser, keyboard/screen reader, real viewports.
+- [x] **Invited journey path (automated):** sign-in → trade → retry → export → sign out → deletion is locked by `ship-check`. Still pending: send invitations and run the same path on real test wallets against the live Site.
+- [ ] **Ops monitor (owner):** assign an operations owner; configure an external monitor for `/api/health` and `/api/ready` with an approved access method for the private audience; alert after sustained failures; test notification delivery.
+- [ ] **Spend caps (owner):** configure and verify hosting spend/error thresholds in the provider account. Request limits alone do not cap billing.
+- [ ] **D1 recovery rehearsal (owner):** complete the hosted backup/restore rehearsal above and choose recovery objectives.
+- [ ] **Legal/owner review:** beta terms/privacy on `/guide`, lawful price-data use, provider retention, support ownership. Current documents are drafts, not legal approval.
+- [ ] **Production domain & audience (owner):** select domain and sharing policy; validate HTTPS, SIWE origin and redirects. Audience changes require an explicit decision. Live Site currently returns 401 to unauthenticated callers.
+- [ ] **Mainnet token (separate):** utility, distribution, contract review and user-owned deployment are not part of this paper-trading release.
