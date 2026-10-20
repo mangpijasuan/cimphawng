@@ -23,6 +23,7 @@ The deployed audience remains owner-private. No mainnet token, real trading, pai
 | 2026-10-20 | `npm test` in `hosted/` | 21/21 pass |
 | 2026-10-20 | `node hosted/scripts/ship-check.mjs` | Pass (includes invited-beta API journey) |
 | 2026-10-20 | Live Site `GET /api/health` (unauthenticated curl) | **401 Sign in required** — audience still owner-private; external monitors need an approved access method |
+| 2026-10-20 | Local beta page nav (`serve-preview` + Worker aliases for `/guide` `/account` `/status`) | Pass — clean URLs load; static guide/account/status/home surfaces verified in browser |
 | 2026-10-20 | Browser/device wallet prompts | Still owner/device QA (not automatable without a connected EOA extension on supported devices) |
 | 2026-10-20 | Hosted D1 restore rehearsal | Still pending (local fixture restore only) |
 
