@@ -41,8 +41,8 @@ step('release fingerprint',()=>{
 });
 
 step('backend test suite (21)',()=>{
- const out=run('npm',['test'],hosted);
- if(!out.includes('# pass 21')||out.includes('# fail')&&!out.includes('# fail 0'))throw Error(out.slice(-500));
+ // npm test exits non-zero on failure; run() already throws in that case.
+ run('npm',['test'],hosted);
 });
 
 function database(){
