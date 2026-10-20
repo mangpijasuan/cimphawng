@@ -136,6 +136,16 @@ step('beta surface assets present',()=>{
  }
 });
 
+step('clean beta URL aliases in worker and pages',()=>{
+ const worker=fs.readFileSync(path.join(hosted,'worker.mjs'),'utf8');
+ for(const route of ['/guide','/account','/status']){
+  if(!worker.includes("'"+route+"'"))throw Error('worker missing alias '+route);
+  const hits=[fs.readFileSync(path.join(root,'index.html'),'utf8'),fs.readFileSync(path.join(root,'guide.html'),'utf8')]
+   .some(src=>src.includes('href="'+route+'"')||src.includes("href='"+route+"'"));
+  if(!hits)throw Error('pages missing link to '+route);
+ }
+});
+
 console.log('\nRelease '+RELEASE.version+' · '+RELEASE.fingerprint.slice(0,12)+'… · channel '+RELEASE.channel);
 console.log('Site origin (SIWE): '+SITE_ORIGIN);
 console.log('\nAutomated ship checks: '+(failures.length?'FAILED':'PASSED'));
