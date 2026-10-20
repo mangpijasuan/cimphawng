@@ -27,14 +27,15 @@ def book_dep(request: Request) -> PriceBook:
     return request.app.state.prices
 
 
-async def ensure_account(db: AsyncSession, user: User, s: Settings) -> None:
+async def ensure_account(db: AsyncSession, user: User | int, s: Settings) -> None:
     """Create a row for every asset (USDC at the starting amount, the rest at zero).
 
     Every row existing up front means swaps can always lock both sides. ON CONFLICT DO NOTHING makes
     this safe when two requests for a new member arrive at the same time.
     """
+    user_id = user if isinstance(user, int) else user.id
     insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
-    rows = [{"user_id": user.id, "asset": a, "amount": s.paper_start_usdc if a == "USDC" else Decimal(0)}
+    rows = [{"user_id": user_id, "asset": a, "amount": s.paper_start_usdc if a == "USDC" else Decimal(0)}
             for a in ASSETS]
     await db.execute(insert(Balance).values(rows).on_conflict_do_nothing())
     await db.commit()
@@ -84,6 +85,52 @@ class SwapIn(BaseModel):
     amount: Decimal = Field(gt=0, max_digits=40, decimal_places=18)
 
 
+class SwapRefused(Exception):
+    def __init__(self, status: int, detail: str):
+        super().__init__(detail)
+        self.status, self.detail = status, detail
+
+
+async def execute_swap(
+    db: AsyncSession, user_id: int, from_asset: str, to_asset: str, amount: Decimal | None,
+    book: PriceBook, s: Settings, *, fraction: Decimal = Decimal(1), source: str = "manual",
+) -> PaperTrade:
+    """Book one swap in the current transaction; the caller commits. Raises SwapRefused.
+
+    amount=None swaps `fraction` of whatever the from_asset balance is once it is locked (used by bots).
+    The account rows must already exist (ensure_account).
+    """
+    # Lock both balance rows (in a fixed order, so two swaps can't deadlock) until the caller commits.
+    q = (select(Balance).where(Balance.user_id == user_id, Balance.asset.in_([from_asset, to_asset]))
+         .order_by(Balance.asset).with_for_update())
+    rows = {b.asset: b for b in (await db.execute(q)).scalars().all()}
+    src, dst = rows[from_asset], rows[to_asset]
+    if amount is None:
+        amount = (src.amount * fraction).quantize(Q, rounding=ROUND_DOWN)
+    if amount <= 0 or src.amount < amount:
+        raise SwapRefused(400, f"not enough {from_asset}")
+    try:
+        # read prices only once the locks are held, so a long wait can't let a stale price through
+        px_in, px_out = book.get(from_asset), book.get(to_asset)
+    except StalePrice:
+        # stale-data guard: never trade on old prices, even pretend ones
+        raise SwapRefused(503, "live prices are unavailable right now; try again shortly")
+
+    value_usd = amount * px_in
+    if value_usd < s.min_trade_usd:
+        raise SwapRefused(400, f"minimum trade is ${s.min_trade_usd}")
+    fee_usd = value_usd * s.swap_fee
+    out = ((value_usd - fee_usd) / px_out).quantize(Q, rounding=ROUND_DOWN)
+
+    src.amount = src.amount - amount
+    dst.amount = dst.amount + out
+    trade = PaperTrade(user_id=user_id, from_asset=from_asset, to_asset=to_asset, amount_in=amount,
+                       amount_out=out, price_in_usd=px_in, price_out_usd=px_out, fee_usd=fee_usd.quantize(Q),
+                       source=source)
+    db.add(trade)
+    return trade
+
+
 @router.post("/swap")
 async def swap(
     body: SwapIn, user: User = Depends(current_user), db: AsyncSession = Depends(db_dep),
@@ -99,31 +146,10 @@ async def swap(
         raise HTTPException(503, "live prices are unavailable right now; try again shortly")
 
     await ensure_account(db, user, s)
-    # Lock both balance rows (in a fixed order, so two swaps can't deadlock) until this swap commits.
-    q = (select(Balance).where(Balance.user_id == user.id, Balance.asset.in_([body.from_asset, body.to_asset]))
-         .order_by(Balance.asset).with_for_update())
-    rows = {b.asset: b for b in (await db.execute(q)).scalars().all()}
-    src, dst = rows[body.from_asset], rows[body.to_asset]
-    if src.amount < body.amount:
-        raise HTTPException(400, f"not enough {body.from_asset}")
     try:
-        # read prices only once the locks are held, so a long wait can't let a stale price through
-        px_in, px_out = book.get(body.from_asset), book.get(body.to_asset)
-    except StalePrice:
-        # stale-data guard: never trade on old prices, even pretend ones
-        raise HTTPException(503, "live prices are unavailable right now; try again shortly")
-
-    value_usd = body.amount * px_in
-    if value_usd < s.min_trade_usd:
-        raise HTTPException(400, f"minimum trade is ${s.min_trade_usd}")
-    fee_usd = value_usd * s.swap_fee
-    out = ((value_usd - fee_usd) / px_out).quantize(Q, rounding=ROUND_DOWN)
-
-    src.amount = src.amount - body.amount
-    dst.amount = dst.amount + out
-    trade = PaperTrade(user_id=user.id, from_asset=body.from_asset, to_asset=body.to_asset, amount_in=body.amount,
-                       amount_out=out, price_in_usd=px_in, price_out_usd=px_out, fee_usd=fee_usd.quantize(Q))
-    db.add(trade)
+        trade = await execute_swap(db, user.id, body.from_asset, body.to_asset, body.amount, book, s)
+    except SwapRefused as e:
+        raise HTTPException(e.status, e.detail)
     await db.commit()
     return {"trade": trade_out(trade), "portfolio": await portfolio(db, user, book, s)}
 
@@ -134,6 +160,7 @@ def trade_out(t: PaperTrade) -> dict:
         "amount_in": num(t.amount_in), "amount_out": num(t.amount_out),
         "price_in_usd": num(t.price_in_usd), "price_out_usd": num(t.price_out_usd),
         "fee_usd": str(t.fee_usd.quantize(Decimal("0.0001"))), "created_at": t.created_at.isoformat() + "Z",
+        "source": t.source,
     }
 
 

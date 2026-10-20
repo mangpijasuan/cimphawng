@@ -8,6 +8,8 @@ from eth_account.messages import encode_defunct
 
 from app.config import Settings
 from app.main import create_app
+from sqlalchemy import text
+
 from app.models import Base
 
 # Uses SQLite by default. Set TEST_DATABASE_URL (e.g. postgresql+asyncpg://...) to run against PostgreSQL.
@@ -27,6 +29,7 @@ async def app(tmp_path):
     a = create_app(s)
     async with a.state.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+        await conn.execute(text("DROP TABLE IF EXISTS alembic_version"))  # so init_db migrates from scratch
     await a.state.init_db()
     a.state.prices.set("ETH", Decimal("2000"))
     a.state.prices.set("cbBTC", Decimal("50000"))

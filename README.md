@@ -149,6 +149,8 @@ The `server/` folder holds the Python API that will run on Hetzner at cimphawng.
 
 - **Wallet sign-in** (Sign-In with Ethereum). Members sign a free message in their own wallet. The server never sees keys.
 - **Paper trading** for every member: 100 pretend USDC to swap between USDC, ETH and cbBTC at **real** Base DEX prices, with a 0.3% fee.
+- **Paper bots** for every member: pick MA cross or RSI 30/70 (the backtest's rules), ETH or cbBTC, and a buy size. The
+  bot runs on the server on closed 1-hour candles and trades your paper wallet, even with the page closed.
 
 `infra/` has the Docker Compose, Caddy (automatic HTTPS) and PostgreSQL setup. See [server/README.md](server/README.md)
 for the API, and [docs/DEPLOY.md](docs/DEPLOY.md) for step-by-step Hetzner setup.
@@ -159,7 +161,11 @@ The web page's **Paper trading** panel (on the Home / Inn tab) uses the server:
 - See your pretend portfolio, swap with a live "you get about…" preview, see your last trades, reset, and sign out.
 - It says clearly that Cimphawng never asks for a seed phrase, and that signing in is free.
 
-On GitHub Pages there's no server, so the panel just says paper trading starts once cimphawng.com is live.
+The **My paper bot** panel (on the Bot tab) sets up, starts and stops your bot. It shows the current signal, when it
+last checked, what it did, and its trades (also marked 🤖 in your Home tab history). While it runs, the bot decides for
+your whole balance of its coin.
+
+On GitHub Pages there's no server, so these panels just say they start once cimphawng.com is live.
 
 The **System** panel on the AI tab shows live numbers from the server, all real and none personal, refreshed every 5 seconds while it's on screen:
 
@@ -183,3 +189,18 @@ It's a single file with no build step:
 - Open `index.html` in any browser, or
 - Serve it: `python3 -m http.server` then visit http://localhost:8000, or
 - Host it free with GitHub Pages (Settings → Pages → deploy from branch, root folder).
+
+## CIMP Testnet Lab
+
+Open [token/](token/) from the Home wallet card to deploy or load a **Cimphawng Test Token**
+on **Base Sepolia (chain 84532)**. This is a separate experimental ERC-20 with a provisional
+fixed supply of 1,000,000 test CIMP, minted once to the deploying wallet. The contract blocks
+mainnet deployment. No token is deployed just by opening the page or merging this code.
+
+The lab checks the selected contract's runtime bytecode and supply before showing its balance
+or enabling transfers. Deployment and transfers require the user's own browser wallet approval
+and Base Sepolia test ETH for gas. It never asks for a private key or seed phrase.
+
+**Simulation balances, paper balances, and simulated bot profits cannot be redeemed for test tokens.**
+No price, liquidity pool, rewards entitlement, or mainnet tokenomics is introduced.
+See [the deployment guide](docs/CIMP-TESTNET.md) for testing, deployment, and verification.

@@ -341,14 +341,18 @@ the wallet's real on-chain balances.
 | **Now** | Simulated terminal, $100 wallet, news events, Zomi/English, CIMP | GitHub Pages | No |
 | **1. Real DEX prices** ✅ | Live ETH and cbBTC prices, candles and trades from their top USDC pools on Base, next to CIMP. GeckoTerminal API, DexScreener fallback | Browser only. Can move to `cimphawng.com` via GitHub Pages | No |
 | **2. Analysis** ✅ | MA20/MA50, RSI 14, volatility, crossover signals, and a backtest (MA cross or RSI 30/70, 0.3% fee, no lookahead) on up to 300 candles. More Base coins still to choose | Browser | No |
-| **3. Full stack + community** 🚧 | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member. **Part 1 done:** API with wallet sign-in and paper swaps at live prices, PostgreSQL, Caddy, Docker Compose, deploy guide, CI tests. **Part 2 done:** web app Connect-wallet button and paper-trading panel. **System monitor done:** public `/api/stats` and a System panel (AI tab) with real server, traffic, price-feed, database and community numbers. **Next:** paper bots, WalletConnect for phone wallets without an in-app browser, Alembic migrations, a separate ingestor and Redis once more services need live data | Hetzner · cimphawng.com | No |
+| **3. Full stack + community** 🚧 | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member. **Part 1 done:** API with wallet sign-in and paper swaps at live prices, PostgreSQL, Caddy, Docker Compose, deploy guide, CI tests. **Part 2 done:** web app Connect-wallet button and paper-trading panel. **System monitor done:** public `/api/stats` and a System panel (AI tab) with real server, traffic, price-feed, database and community numbers. **Paper bots done:** each member can run one bot (MA cross or RSI 30/70, the backtest's rules) on ETH or cbBTC; it trades their paper wallet on closed 1-hour candles, on the server, with a "My paper bot" panel on the Bot tab. **Alembic migrations done.** **Next:** WalletConnect for phone wallets without an in-app browser, a separate ingestor and Redis once more services need live data | Hetzner · cimphawng.com | No |
 | **4. Member one-tap swaps** | Quotes and Zomi previews. Members sign and send swaps from **their own wallet**. Portfolio tracking from the chain | Hetzner + member wallets | Yes, the member's own, signed by them |
 | **5. Owner's automated bot** | Execution service live adapter, bot wallet, every section 5.1 guard, alerts | Hetzner | Yes, the owner's bot wallet only |
 | **Perps Desk** ✅ (paper) | `desk.html` learning lab (section 8): volatility-scaled leverage tickets, approval, guards, dashboard | Browser now; server engine later | No. Live is owner-only, after section 8.4 |
 
 > **Step 3 part 1 simplifications.** The price feed runs inside the API process, as one shared GeckoTerminal poller for
-> all members. Tables are created on start-up. Redis isn't used yet. These change when the strategy engine and bots arrive
-> and several services need the same live data.
+> all members. Redis isn't used yet. These change when several services need the same live data.
+>
+> **Paper bots** run in the API process too, as one runner for all members. Every minute it looks for a newly closed
+> 1-hour candle (from the same GeckoTerminal pools as the prices) and lets each running bot act on it once. Bot trades go
+> through the same swap code, live prices, fee and stale-price guard as a member's own swaps. A row lock on each bot means
+> that even two runners can never act twice on one candle. Schema changes are Alembic migrations, applied on start-up.
 
 ### 7.1 Repository layout (from step 3)
 
@@ -455,5 +459,9 @@ Members never get a live version. For the community it stays a paper learning la
 | DEXs and quotes | Direct Uniswap/Aerodrome contracts, or an aggregator (0x, 1inch, Odos) | Aggregator for best prices on member swaps. Direct pool reads for data |
 | RPC provider | Alchemy, QuickNode, Infura or public RPC | Start on a free tier, and add a second provider as backup |
 | Starting token list | e.g. ETH, USDC, cbBTC | Start small and review before adding tokens |
-| CIMP | Stays a pretend token, or becomes a real on-chain token | Keep it pretend for now. A real token is a separate project with its own legal and security questions |
+| CIMP mainnet | Purpose, supply, distribution, and launch remain undecided | Keep the terminal simulated. A separate Base Sepolia test token lab is implemented; see [CIMP-TESTNET.md](CIMP-TESTNET.md). No mainnet launch or paper balance conversion |
 | Domain purchase | Register cimphawng.com (and .us if eligible) | Register soon so the name is secured |
+
+## 11. CIMP Testnet Lab
+
+`token/` is a separate static page backed by a fixed-supply OpenZeppelin ERC-20. It uses only Base Sepolia in the browser; the constructor also allows local development chain IDs 31337 and 1337. Wallet approvals happen in the user’s wallet. The compiled artifact, runtime bytecode, and explorer verification input are built from pinned dependencies. Contract selection is verified against the exact runtime artifact and total supply. No API custody, real trading, pool, or token distribution service is added. See [CIMP-TESTNET.md](CIMP-TESTNET.md).

@@ -112,6 +112,23 @@ class GeckoTerminalFeed:
         if missing:  # the others were still updated; this counts as a failed refresh so it shows on the monitor
             raise RuntimeError(f"no usable price for {', '.join(missing)}")
 
+    async def hourly_candles(self, asset: str, limit: int = 120) -> list[tuple[int, float]]:
+        """(open time in Unix seconds, close in USD) for the asset's pool, oldest first, newest may still be open."""
+        if asset not in self.pools:
+            await self.discover()
+        pool, is_base = self.pools[asset]
+        j = await self._json(f"{GT}/networks/base/pools/{pool}/ohlcv/hour?aggregate=1&limit={limit}"
+                             f"&currency=usd&token={'base' if is_base else 'quote'}")
+        out = []
+        for row in j.get("data", {}).get("attributes", {}).get("ohlcv_list", []):
+            try:
+                t, close = int(row[0]), float(row[4])
+            except (IndexError, TypeError, ValueError):
+                continue
+            if close > 0:
+                out.append((t, close))
+        return sorted(set(out))
+
     async def run(self) -> None:
         backoff = self.refresh_s
         while True:
