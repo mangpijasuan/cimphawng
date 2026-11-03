@@ -22,6 +22,7 @@ as profit whatever the outcome. That's the game the bot plays:
 | Neural shell | Model inputs → rotating particle "brain" → order-router outputs (eye candy driven by live values) |
 | Resolution funnel | Price path this round plus the ±1σ/±2σ volatility cone to settlement |
 | Running combined VWAP | Cost of every recent set vs the $1.00 payout, with the running average |
+| Cimphawng Trading | Demo BTC/ETH/SOL bots (Momentum Alpha, Grid Master, Mean Reversion Pro, Scalper X) on the Bot tab, separate from the CIMP bot |
 
 ## My wallet ($100 pretend mode)
 
@@ -51,6 +52,19 @@ On phones (screens up to 760px wide) the terminal turns into an app-style layout
 | **AI** | The neural-shell animation |
 
 Only the open tab's charts are drawn, which saves battery. The app remembers the last tab you used. Desktop keeps the full terminal.
+
+## Cimphawng Trading (demo, Bot tab)
+
+The Cimphawng Trading dashboard is integrated into `index.html` as a `data-tab="bot"` panel
+(`#tbots`), styled with the terminal's own variables and scoped `tb-` classes so it
+does not clash with existing panels. It adds:
+
+- BTC/ETH/SOL pair and timeframe switching with a canvas chart
+- Four toggleable demo bots with sparklines, ROI, win rate and trade counts
+- Open positions, a live demo trades feed, and a Quick Trade panel
+
+All Cimphawng Trading numbers are simulated demo data, separate from the CIMP bot wallet
+and from paper trading. Quick Trade places no real order.
 
 ## Perps Desk (paper-only learning lab): `desk.html`
 

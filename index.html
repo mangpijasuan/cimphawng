@@ -318,6 +318,25 @@
     table.book tr.ask td:first-child, table.book tr.bid td:first-child { text-align: left; padding-left: 10px; }
   }
   @media (prefers-reduced-motion: reduce) { .feed .track { animation: none; } }
+
+  /* Cimphawng Trading (integrated demo) — scoped tb- classes only */
+  .tb-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+  @media(max-width:1150px){.tb-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:760px){.tb-grid{grid-template-columns:1fr}}
+  .tb-bot{background:#14212b;border:1px solid var(--line);border-radius:9px;padding:14px}
+  .tb-bot h3{margin:0 0 4px;font-size:13px;color:#ecf4f7}
+  .tb-bot p{margin:0;color:var(--dim);font-size:11px}
+  .tb-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .tb-toggle{width:46px;height:26px;border-radius:999px;border:1px solid var(--line);background:#26333f;position:relative;flex:none;padding:0}
+  .tb-toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s}
+  .tb-toggle.on{background:var(--green)} .tb-toggle.on::after{left:22px;background:#09271c}
+  .tb-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:#0b141d;border:1px solid var(--line);border-radius:9px;padding:10px;margin-top:10px;text-align:center}
+  .tb-stats b{display:block;font-size:13px;color:#ecf4f7} .tb-stats span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .tb-price{font-size:24px;color:#fff;font-weight:600;letter-spacing:-.5px}
+  .tb-up{color:var(--green)} .tb-down{color:var(--red)}
+  .tb-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
+  #tbots .tfs button.on{background:#214535;color:var(--green);border-color:#385e49}
+
 </style>
 <link rel="stylesheet" href="./ui.css">
 </head>
@@ -482,6 +501,43 @@
       <div class="pp-safety">🤖 <span>While it runs, the bot decides for your whole balance of its coin, including coins you bought yourself. It buys only when it holds none and always sells all of it.</span></div>
     </div>
     <div class="muted" id="pb-msg"></div>
+  </section>
+
+
+  <section class="panel" id="tbots" data-tab="bot">
+    <h2>Cimphawng Trading <span>BTC · ETH · SOL · simulated demo</span><em class="live">DEMO</em></h2>
+    <div class="muted">These are the Cimphawng Trading strategies, brought into the terminal's Bot tab. They are separate from the CIMP bot above and from your paper bot: demo prices only, no real orders, no wallet connection.</div>
+    <div class="kv">
+      <div><span>Total balance</span><b id="tb-balance">$284,739.42</b></div>
+      <div><span>Today's P&amp;L</span><b id="tb-pnl" class="tb-up">+$3,284.10</b></div>
+      <div><span>Active bots</span><b id="tb-active">3 / 4</b></div>
+      <div><span>Win rate (30d)</span><b>61.4%</b></div>
+    </div>
+    <div class="tb-row">
+      <div class="tfs" id="tb-pairs"><button data-tb-pair="BTC" class="on">BTC / USDT</button><button data-tb-pair="ETH">ETH / USDT</button><button data-tb-pair="SOL">SOL / USDT</button></div>
+      <div class="tfs" id="tb-tfs"><button data-tb-tf="1H">1H</button><button data-tb-tf="4H">4H</button><button data-tb-tf="1D" class="on">1D</button><button data-tb-tf="1W">1W</button><button data-tb-tf="1M">1M</button></div>
+    </div>
+    <div class="tb-row"><span class="tb-price" id="tb-price">$67,842.50</span><span id="tb-change" class="tb-up">+$1,240.30 (1.86%)</span><span class="muted" id="tb-meta">24h High $68,920 · 24h Low $65,410 · RSI 62.4 — Bullish</span></div>
+    <canvas id="c-tb" style="height:220px;width:100%"></canvas>
+    <div class="tb-grid" id="tb-botgrid"></div>
+    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:14px">
+      <div>
+        <h3 style="font-size:12px;color:#ecf4f7">Open positions</h3>
+        <table class="trades"><thead><tr><th>Asset</th><th>Side</th><th>Entry → Now</th><th>P&amp;L</th></tr></thead><tbody id="tb-pos"></tbody></table>
+        <h3 style="font-size:12px;color:#ecf4f7;margin-top:16px">Live trades <span class="tb-up" style="font-size:10px">● LIVE FEED</span></h3>
+        <ul class="hist" id="tb-feed"></ul>
+      </div>
+      <div>
+        <h3 style="font-size:12px;color:#ecf4f7">Quick trade (demo)</h3>
+        <div class="tfs" id="tb-side"><button data-tb-side="buy" class="on">Buy</button><button data-tb-side="sell">Sell</button></div>
+        <div style="margin:8px 0"><label class="muted">Pair</label><select id="tb-trade-pair"><option>BTC / USDT</option><option>ETH / USDT</option><option>SOL / USDT</option></select></div>
+        <div style="margin:8px 0"><label class="muted">Amount (USD)</label><input id="tb-amt" type="number" value="1000" min="10" step="10"></div>
+        <div class="muted">Est. receive <b id="tb-est" style="color:#ecf4f7">0.01474 BTC</b></div>
+        <div style="margin:10px 0"><label class="muted">Risk per trade — <span id="tb-risk">2.0%</span></label><input type="range" id="tb-risk-range" min="0.5" max="5" step="0.5" value="2" style="width:100%"></div>
+        <button class="g" id="tb-execute" style="width:100%">Execute Buy →</button>
+        <div class="muted" style="margin-top:8px">Demo only — no real order is placed.</div>
+      </div>
+    </div>
   </section>
 
   <section class="panel" id="wallet" data-tab="bot">
@@ -2518,5 +2574,82 @@
   requestAnimationFrame(frame);
 })();
 </script>
+
+<script>
+(function(){
+  const PRICES={BTC:{price:67842.5,change:1.86,high:68920,low:65410},ETH:{price:3524.18,change:2.41,high:3610,low:3380},SOL:{price:171.42,change:-0.84,high:178.2,low:166.4}};
+  let curPair='BTC', curTF='1D', side='buy';
+  const bots=[
+    {id:1,name:'Momentum Alpha',pair:'BTC / USDT \u00b7 Trend Following',roi:'+42.8%',win:'71%',trades:184,profit:'+$12,840',on:true,spark:[12,18,15,22,28,24,32,38,34,42]},
+    {id:2,name:'Grid Master',pair:'ETH / USDT \u00b7 Grid Trading',roi:'+28.3%',win:'66%',trades:512,profit:'+$8,210',on:true,spark:[8,12,10,14,13,18,16,20,19,24]},
+    {id:3,name:'Mean Reversion Pro',pair:'SOL / USDT \u00b7 Mean Reversion',roi:'+19.6%',win:'63%',trades:97,profit:'+$3,940',on:true,spark:[10,8,14,11,16,13,18,15,20,19]},
+    {id:4,name:'Scalper X',pair:'BTC / USDT \u00b7 1m Scalping',roi:'+8.1%',win:'58%',trades:1240,profit:'+$1,120',on:false,spark:[20,18,19,16,17,15,16,14,15,13]}
+  ];
+  const $=id=>document.getElementById(id);
+  const fmt=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function sparkSVG(data){
+    const max=Math.max(...data),min=Math.min(...data),w=260,h=36;
+    const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-min)/(max-min||1))*(h-6)-3}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:36px;width:100%"><polyline points="${pts}" fill="none" stroke="#39ff88" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+  function renderBots(){
+    $('tb-botgrid').innerHTML=bots.map(b=>`<article class="tb-bot"><div class="tb-top"><div><h3>${b.name}</h3><p>${b.pair}</p></div><button class="tb-toggle ${b.on?'on':''}" aria-label="Toggle ${b.name}" data-tb-bot="${b.id}"></button></div>${sparkSVG(b.spark)}<div class="tb-stats"><div><b>${b.roi}</b><span>ROI 30d</span></div><div><b>${b.win}</b><span>Win rate</span></div><div><b>${b.trades}</b><span>Trades</span></div></div><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--dim)">Profit</span><b class="tb-up">${b.profit}</b><span>${b.on?'\u25cf RUNNING':'\u25cb PAUSED'}</span></div></article>`).join('');
+    const active=bots.filter(b=>b.on).length;
+    $('tb-active').textContent=active+' / 4';
+  }
+  $('tb-botgrid').addEventListener('click',e=>{const b=e.target.closest('[data-tb-bot]');if(!b)return;const bot=bots.find(x=>x.id===+b.dataset.tbBot);bot.on=!bot.on;renderBots();});
+  const positions=[
+    {sym:'BTC',side:'LONG',entry:64210,now:67842,pnl:'+$4,218',pct:'+5.65%'},
+    {sym:'ETH',side:'LONG',entry:3310,now:3524,pnl:'+$1,864',pct:'+6.47%'},
+    {sym:'SOL',side:'SHORT',entry:182.4,now:171.42,pnl:'+$642',pct:'+6.02%'}
+  ];
+  $('tb-pos').innerHTML=positions.map(p=>`<tr><td><b>${p.sym}</b></td><td>${p.side}</td><td style="font-size:11px">$${fmt(p.entry)} \u2192 $${fmt(p.now)}</td><td><b class="tb-up">${p.pnl}</b><div class="tb-up" style="font-size:11px">${p.pct}</div></td></tr>`).join('');
+  let feedItems=[
+    {s:'BUY',t:'Bought 0.084 BTC @ $67,810',bot:'Momentum Alpha'},
+    {s:'SELL',t:'Sold 1.20 ETH @ $3,518',bot:'Grid Master'},
+    {s:'BUY',t:'Bought 42 SOL @ $170.90',bot:'Mean Reversion'}
+  ];
+  function renderFeed(){$('tb-feed').innerHTML=feedItems.map(f=>`<li><b class="${f.s==='BUY'?'tb-up':'tb-down'}">${f.s}</b> ${f.t} \u00b7 ${f.bot}</li>`).join('');}
+  function genData(seed,len){
+    let v=seed,arr=[];for(let i=0;i<len;i++){v+=(Math.random()-0.42)*seed*0.018;arr.push(v)}
+    const info=PRICES[curPair],lo=info.low*1.004,hi=info.high*0.996,mn=Math.min(...arr),mx=Math.max(...arr);
+    return arr.map(x=>lo+((x-mn)/(mx-mn||1))*(hi-lo));
+  }
+  function drawChart(){
+    const canvas=$('c-tb');if(!canvas)return;const rect=canvas.getBoundingClientRect();if(rect.width<10)return;
+    const dpr=window.devicePixelRatio||1;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const W=rect.width,H=rect.height,pad=14;
+    const len=curTF==='1H'?48:curTF==='4H'?60:curTF==='1W'?42:56;
+    const data=genData(PRICES[curPair].price*0.94,len);data[data.length-1]=PRICES[curPair].price;
+    const min=Math.min(...data)*0.998,max=Math.max(...data)*1.002;
+    const x=i=>pad+i*(W-pad*2)/(data.length-1),y=v=>H-18-((v-min)/(max-min))*(H-36);
+    ctx.strokeStyle='#16262b';ctx.lineWidth=1;for(let i=0;i<5;i++){const yy=pad+i*(H-30)/4;ctx.beginPath();ctx.moveTo(pad,yy);ctx.lineTo(W-pad,yy);ctx.stroke()}
+    const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'rgba(57,255,136,0.28)');grad.addColorStop(1,'rgba(57,255,136,0)');
+    ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.lineTo(x(data.length-1),H);ctx.lineTo(x(0),H);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+    ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.strokeStyle='#39ff88';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.stroke();
+    ctx.beginPath();ctx.arc(x(data.length-1),y(data[data.length-1]),5,0,Math.PI*2);ctx.fillStyle='#39ff88';ctx.fill();
+  }
+  function setPair(p){
+    curPair=p;const d=PRICES[p];
+    document.querySelectorAll('#tb-pairs button').forEach(b=>b.classList.toggle('on',b.dataset.tbPair===p));
+    $('tb-price').textContent='$'+fmt(d.price);
+    const ch=$('tb-change');ch.textContent=`${d.change>=0?'+':''}$${fmt(Math.abs(d.price*d.change/100))} (${d.change>=0?'+':''}${d.change}%)`;ch.className=d.change>=0?'tb-up':'tb-down';
+    $('tb-meta').textContent=`24h High $${fmt(d.high)} \u00b7 24h Low $${fmt(d.low)} \u00b7 RSI 62.4 \u2014 Bullish`;
+    updateEst();drawChart();
+  }
+  $('tb-pairs').addEventListener('click',e=>{const b=e.target.closest('[data-tb-pair]');if(b)setPair(b.dataset.tbPair);});
+  $('tb-tfs').addEventListener('click',e=>{const b=e.target.closest('[data-tb-tf]');if(!b)return;curTF=b.dataset.tbTf;document.querySelectorAll('#tb-tfs button').forEach(x=>x.classList.toggle('on',x===b));drawChart();});
+  function updateEst(){const amt=parseFloat($('tb-amt').value||0);const pair=$('tb-trade-pair').value.split(' ')[0];const price=PRICES[pair]?.price||PRICES.BTC.price;$('tb-est').textContent=(amt/price).toFixed(5)+' '+pair;}
+  $('tb-amt').addEventListener('input',updateEst);$('tb-trade-pair').addEventListener('change',updateEst);
+  $('tb-risk-range').addEventListener('input',e=>$('tb-risk').textContent=parseFloat(e.target.value).toFixed(1)+'%');
+  $('tb-side').addEventListener('click',e=>{const b=e.target.closest('[data-tb-side]');if(!b)return;side=b.dataset.tbSide;document.querySelectorAll('#tb-side button').forEach(x=>x.classList.toggle('on',x===b));$('tb-execute').textContent=`Execute ${side==='buy'?'Buy':'Sell'} \u2192`;});
+  $('tb-execute').addEventListener('click',()=>{const btn=$('tb-execute');const orig=btn.textContent;btn.textContent='\u2713 Order simulated \u2014 check Live trades';feedItems.unshift({s:side==='buy'?'BUY':'SELL',t:`${side==='buy'?'Bought':'Sold'} via Quick Trade \u00b7 $${$('tb-amt').value}`,bot:'Manual'});feedItems=feedItems.slice(0,5);renderFeed();setTimeout(()=>btn.textContent=orig,2000);});
+  setInterval(()=>{const pairs=[['BTC',67842],['ETH',3524],['SOL',171]];const p=pairs[Math.floor(Math.random()*pairs.length)];const isBuy=Math.random()>0.45;feedItems.unshift({s:isBuy?'BUY':'SELL',t:`${isBuy?'Bought':'Sold'} ${(Math.random()*0.4+0.02).toFixed(3)} ${p[0]} @ $${fmt(p[1]+(Math.random()*40-20))}`,bot:['Momentum Alpha','Grid Master','Mean Reversion Pro'][Math.floor(Math.random()*3)]});feedItems=feedItems.slice(0,5);renderFeed();},4200);
+  document.addEventListener('click',e=>{if(e.target.closest('[data-go="bot"]'))setTimeout(drawChart,80);});
+  window.addEventListener('resize',drawChart);
+  renderBots();renderFeed();updateEst();setPair('BTC');
+})();
+</script>
+
 </body>
 </html>
