@@ -336,6 +336,22 @@
   .tb-up{color:var(--green)} .tb-down{color:var(--red)}
   .tb-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
   #tbots .tfs button.on{background:#214535;color:var(--green);border-color:#385e49}
+  .tb-passive{border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:16px;background:#0b141d}
+  .tb-passive-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+  .tb-passive-grid div{background:#14212b;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+  .tb-passive-grid b{display:block;font-size:13px;color:#ecf4f7} .tb-passive-grid span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .tb-signal{border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0;background:#14212b}
+  .tb-signal b{color:#ecf4f7} .tb-signal p{margin:4px 0 0;color:var(--dim);font-size:11px}
+  @media(max-width:760px){
+    #tbots .tb-row{flex-direction:column;align-items:stretch}
+    #tbots .tfs{display:flex;flex-wrap:wrap}
+    #tbots .tfs button{min-height:44px;flex:1 1 auto}
+    #tbots .tb-passive-grid{grid-template-columns:1fr}
+    #tbots .tb-stats{grid-template-columns:1fr 1fr}
+    #tbots .tb-stack{grid-template-columns:1fr !important}
+    #tbots table{width:100%}
+    #tbots button, #tbots input, #tbots select{min-height:44px}
+  }
 
 </style>
 <link rel="stylesheet" href="./ui.css">
@@ -520,7 +536,7 @@
     <div class="tb-row"><span class="tb-price" id="tb-price">$67,842.50</span><span id="tb-change" class="tb-up">+$1,240.30 (1.86%)</span><span class="muted" id="tb-meta">24h High $68,920 · 24h Low $65,410 · RSI 62.4 — Bullish</span></div>
     <canvas id="c-tb" style="height:220px;width:100%"></canvas>
     <div class="tb-grid" id="tb-botgrid"></div>
-    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:14px">
+    <div class="tb-stack" style="display:grid;grid-template-columns:1.2fr .8fr;gap:14px">
       <div>
         <h3 style="font-size:12px;color:#ecf4f7">Open positions</h3>
         <table class="trades"><thead><tr><th>Asset</th><th>Side</th><th>Entry → Now</th><th>P&amp;L</th></tr></thead><tbody id="tb-pos"></tbody></table>
@@ -537,6 +553,23 @@
         <button class="g" id="tb-execute" style="width:100%">Execute Buy →</button>
         <div class="muted" style="margin-top:8px">Demo only — no real order is placed.</div>
       </div>
+    </div>
+    <div class="tb-passive">
+      <h3 style="font-size:12px;color:#ecf4f7;margin:0">Passive Mode (demo) — capital protection first</h3>
+      <div class="muted" style="margin-top:6px">Hands-off demo: protection rules run before any trade, and only a strategy that has passed walk-forward validation <em>and</em> a forward paper proof may run. Monitoring here is automated, not human traders watching 24/7. No return is promised, and no funds or keys are held.</div>
+      <div class="tb-passive-grid">
+        <div><b>BLOCKED</b><span>Protection state</span></div>
+        <div><b>0 eligible</b><span>Validated strategies</span></div>
+        <div><b>10% kill line</b><span>Max drawdown</span></div>
+      </div>
+      <div class="muted">Why blocked: no strategy is validated yet in the full app — SOL momentum, mean reversion, grid and DCA all failed out-of-sample, and BTC momentum failed too. Passive Mode therefore stays off and places no trades in this demo.</div>
+      <div class="muted" style="margin-top:8px">Protection (demo): max position 20% per coin · daily loss limit $1,000 · max order $1,000 · closing sells always allowed.</div>
+      <h4 style="font-size:12px;color:#ecf4f7;margin:14px 0 4px">Signals (demo — visible, but not passive-eligible)</h4>
+      <div class="tb-signal"><b>Momentum · SELL · strength 73</b><p>BTC, ETH and SOL: 10-day average below the 30-day average — downtrend.</p></div>
+      <div class="tb-signal"><b>Mean reversion · BUY · strength 70</b><p>All three coins below their 20-day means — oversold.</p></div>
+      <div class="tb-signal"><b>Grid · BUY · strength 70</b><p>All three coins low in their 30-day range — low grid band.</p></div>
+      <div class="tb-signal"><b>DCA · BUY · strength 50</b><p>Schedule-based tranche, regardless of price.</p></div>
+      <div class="muted" style="margin-top:8px">These signals exist, but they do not unlock passive trading until a strategy passes both proof gates.</div>
     </div>
   </section>
 

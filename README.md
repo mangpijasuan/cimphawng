@@ -62,6 +62,8 @@ does not clash with existing panels. It adds:
 - BTC/ETH/SOL pair and timeframe switching with a canvas chart
 - Four toggleable demo bots with sparklines, ROI, win rate and trade counts
 - Open positions, a live demo trades feed, and a Quick Trade panel
+- Passive Mode (demo, capital protection first): blocked with 0 eligible strategies, because no strategy has passed walk-forward validation and a forward paper proof yet; protection stats, kill line, and demo signals are shown, but no passive trade is placed
+- Mobile stacking for the panel: bot grid, passive grid, and positions/Quick Trade stack to one column on phone, with 44px tap targets, so the panel does not overflow the viewport
 
 All Cimphawng Trading numbers are simulated demo data, separate from the CIMP bot wallet
 and from paper trading. Quick Trade places no real order.
