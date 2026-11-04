@@ -13,9 +13,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from . import auth, paper, stats
+from . import auth, bots, migrate, paper, stats
 from .config import Settings
-from .models import Base
 from .prices import GeckoTerminalFeed, PriceBook
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -27,19 +26,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     book = PriceBook(s.price_max_age_s)
 
     async def init_db() -> None:
-        # Tables are created on start-up for now; database migrations (Alembic) come with later schema changes.
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(migrate.upgrade)
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
         await init_db()
-        task = None
+        tasks = []
         if s.price_feed:
             app.state.feed = GeckoTerminalFeed(book, s.price_refresh_s)
-            task = asyncio.create_task(app.state.feed.run())
+            tasks.append(asyncio.create_task(app.state.feed.run()))
+            if s.bots_enabled:  # bots need the feed's pools for their candles
+                app.state.bots.candles = app.state.feed.hourly_candles
+                tasks.append(asyncio.create_task(app.state.bots.run()))
         yield
-        if task:
+        for task in tasks:
             task.cancel()
         await engine.dispose()
 
@@ -50,6 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
     app.state.prices = book
     app.state.init_db = init_db
+    app.state.bots = bots.BotRunner(app.state.sessionmaker, book, s, candles=None)
     app.state.request_stats = stats.RequestStats()
 
     @app.middleware("http")
@@ -82,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(paper.router)
+    app.include_router(bots.router)
     app.include_router(stats.router)
     return app
 

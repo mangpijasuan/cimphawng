@@ -17,7 +17,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from sqlalchemy import case, func, select, text
 
-from .models import PaperTrade, User, utcnow
+from .models import PaperBot, PaperTrade, User, utcnow
 
 router = APIRouter(prefix="/api")
 log = logging.getLogger("cimphawng.stats")
@@ -100,6 +100,7 @@ async def _query_db_stats(app) -> dict:
         # each table in one query, so its numbers come from the same snapshot
         members, active = (await db.execute(select(
             func.count(), _count_if(User.last_seen_at >= now - timedelta(hours=24))).select_from(User))).one()
+        bots_on = await db.scalar(select(func.count()).select_from(PaperBot).where(PaperBot.enabled.is_(True)))
         trades_total, trades_today, trades_hour = (await db.execute(select(
             func.count(), _count_if(PaperTrade.created_at >= day_start),
             _count_if(PaperTrade.created_at >= now - timedelta(hours=1))).select_from(PaperTrade))).one()
@@ -112,7 +113,8 @@ async def _query_db_stats(app) -> dict:
         "db": {"engine": app.state.engine.dialect.name, "ok": True, "ping_ms": ping_ms,
                "size_mb": round(size / 1e6, 2) if size is not None else None},
         "community": {"members": members, "active_24h": int(active), "paper_trades_total": trades_total,
-                      "paper_trades_today": int(trades_today), "paper_trades_last_hour": int(trades_hour)},
+                      "paper_trades_today": int(trades_today), "paper_trades_last_hour": int(trades_hour),
+                      "bots_on": bots_on},
     }
 
 
@@ -143,6 +145,12 @@ async def stats(request: Request):
             "refresh_failed": feed.failed if feed else None,
             "last_error": feed.last_error if feed else None,
             "pools": {a: p for a, (p, _) in feed.pools.items()} if feed else {},
+        },
+        "bots": {
+            "running": bool(app.state.bots.candles),
+            "ticks": app.state.bots.ticks,
+            "trades": app.state.bots.trades,
+            "last_error": app.state.bots.last_error,
         },
         **(await _db_stats(request)),
     }

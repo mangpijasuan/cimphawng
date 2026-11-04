@@ -115,6 +115,11 @@
   #sys-prices .sys-row > span:first-child { text-transform: none; font-size: 11px; color: var(--text); }
   .sys-err { color: var(--red); font-size: 10px; word-break: break-word; margin-top: 4px; }
   .pp-cols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
+  .pb-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .pb-row > span { width: 72px; flex: none; }
+  #pbot .pb-row .tfs { margin: 0; }  /* ui.css gives .tfs a bottom margin; rows here line up with their label */
+  #pb-rule { margin-top: 8px; }
+  #pb-go { margin-top: 10px; }
   .pp-safety { border: 1px solid #1f4a2e; background: rgba(57,255,136,.06); color: var(--text); padding: 8px 10px; margin: 10px 0; font-size: 11px; }
   .pp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .pp-head code { color: var(--cyan); }
@@ -206,7 +211,7 @@
   /* ---------- phone app view (tabs + cards), desktop stays a terminal ---------- */
   .tabbar, .ico { display: none; }
   @media (max-width: 760px) {
-    :root { --mbg: #13141f; --card: #1e2030; --card2: #2a2d42; --mgreen: #5ad67d; --mblue: #7fb8ff; --morange: #f5a524; }
+    :root { --mbg: #080e16; --card: #141f2b; --card2: #26333f; --mgreen: #5ad67d; --mblue: #7fb8ff; --morange: #f5a524; }
     html, body { background: var(--mbg); }
     body { font-family: "Poppins", system-ui, -apple-system, sans-serif; font-size: 13px; letter-spacing: 0;
            padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
@@ -217,10 +222,10 @@
              flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 10px; }
     header::-webkit-scrollbar { display: none; }
     .brand, .hs-up, .hs-dn, .hs-sum, #h-clock, .feed, .hdr-stats .lbl { display: none; }
-    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #4b2bb0;
-            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #6d4ee6; }
+    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #183b30;
+            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #2d5d4d; }
     .hdr-stats { margin: 0; flex-wrap: nowrap; gap: 10px; }
-    .hdr-stats > .chip, .hdr-stats > button { flex: none; height: 50px; padding: 0 14px; border-radius: 16px; background: #181a28;
+    .hdr-stats > .chip, .hdr-stats > button { flex: none; height: 50px; padding: 0 14px; border-radius: 16px; background: #13211d;
             border: 2px solid var(--card2); display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #fff; cursor: pointer; }
     .hdr-stats > button { font-size: 13px; }
     .hdr-stats b { margin: 0; font-weight: 600; color: #fff !important; }
@@ -301,24 +306,60 @@
     /* floating tab bar */
     .tabbar { display: flex; position: fixed; z-index: 30; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
               height: 76px; padding: 6px; border-radius: 38px;
-              background: linear-gradient(135deg, rgba(86,94,232,.93), rgba(142,122,246,.93));
+              background: linear-gradient(135deg, #162a22, #102019);
               -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
               box-shadow: 0 12px 32px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.3); }
     .tabbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
                      padding: 0; border: 0; border-radius: 32px; background: transparent; color: #fff; font-size: 11px; font-weight: 500; }
     .tabbar button:hover { background: rgba(255,255,255,.08); }
     .tabbar svg { width: 26px; height: 26px; }
-    .tabbar button.on { color: #6dff97; font-weight: 600; background: rgba(14,16,40,.45); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+    .tabbar button.on { color: #6dff97; font-weight: 600; background: rgba(29,65,48,.65); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
     table.book td { text-align: right; }
     table.book tr.ask td:first-child, table.book tr.bid td:first-child { text-align: left; padding-left: 10px; }
   }
   @media (prefers-reduced-motion: reduce) { .feed .track { animation: none; } }
+
+  /* Cimphawng Trading (integrated demo) — scoped tb- classes only */
+  .tb-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+  @media(max-width:1150px){.tb-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:760px){.tb-grid{grid-template-columns:1fr}}
+  .tb-bot{background:#14212b;border:1px solid var(--line);border-radius:9px;padding:14px}
+  .tb-bot h3{margin:0 0 4px;font-size:13px;color:#ecf4f7}
+  .tb-bot p{margin:0;color:var(--dim);font-size:11px}
+  .tb-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .tb-toggle{width:46px;height:26px;border-radius:999px;border:1px solid var(--line);background:#26333f;position:relative;flex:none;padding:0}
+  .tb-toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s}
+  .tb-toggle.on{background:var(--green)} .tb-toggle.on::after{left:22px;background:#09271c}
+  .tb-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:#0b141d;border:1px solid var(--line);border-radius:9px;padding:10px;margin-top:10px;text-align:center}
+  .tb-stats b{display:block;font-size:13px;color:#ecf4f7} .tb-stats span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .tb-price{font-size:24px;color:#fff;font-weight:600;letter-spacing:-.5px}
+  .tb-up{color:var(--green)} .tb-down{color:var(--red)}
+  .tb-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
+  #tbots .tfs button.on{background:#214535;color:var(--green);border-color:#385e49}
+  .tb-passive{border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:16px;background:#0b141d}
+  .tb-passive-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+  .tb-passive-grid div{background:#14212b;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+  .tb-passive-grid b{display:block;font-size:13px;color:#ecf4f7} .tb-passive-grid span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .tb-signal{border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0;background:#14212b}
+  .tb-signal b{color:#ecf4f7} .tb-signal p{margin:4px 0 0;color:var(--dim);font-size:11px}
+  @media(max-width:760px){
+    #tbots .tb-row{flex-direction:column;align-items:stretch}
+    #tbots .tfs{display:flex;flex-wrap:wrap}
+    #tbots .tfs button{min-height:44px;flex:1 1 auto}
+    #tbots .tb-passive-grid{grid-template-columns:1fr}
+    #tbots .tb-stats{grid-template-columns:1fr 1fr}
+    #tbots .tb-stack{grid-template-columns:1fr !important}
+    #tbots table{width:100%}
+    #tbots button, #tbots input, #tbots select{min-height:44px}
+  }
+
 </style>
+<link rel="stylesheet" href="./ui.css">
 </head>
-<body>
+<body class="terminal"><aside style="margin:12px;padding:14px 20px;border:1px solid #234354;border-radius:16px;background:#0d2028;color:#c9e9e0;font:14px/1.6 system-ui"><strong>Private beta · Learn with paper funds.</strong> Guest demo stays in this browser. Wallet sign-in saves your pretend $100 portfolio. Token Lab uses testnet tokens. Real trading and scheduled bots are unavailable.<nav aria-label="Beta help"><a href="/guide">Getting started &amp; privacy</a> · <a href="/account">Your account</a> · <a href="/status">Service status</a></nav></aside>
 <header>
   <div class="logo">CIMP</div>
-  <div class="brand">x-Cimphawng // TOKEN BOT<small>CIMP · 1M UP/DOWN · SIMULATED BOOK</small></div>
+  <div class="brand">Cimphawng<small>Market research & simulation</small></div>
   <div class="hdr-stats">
     <div class="chip hs-spot" data-go="cimp"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5" stroke-linecap="round"/></svg><span class="lbl">CIMP/USD</span><b id="h-spot">–</b></div>
     <div class="hs-up"><span class="lbl">UP</span><b id="h-up">–</b></div>
@@ -334,9 +375,14 @@
 <div class="feed"><div class="tag">● LIVE FEED</div><div class="track" id="feed">booting simulation…</div></div>
 <div class="news" id="news" hidden><span class="ntag"><b id="news-tag">NEWS</b></span><span id="news-text"></span><span class="nmove" id="news-move"></span></div>
 
+<section class="workspace-heading" aria-label="Workspace overview">
+  <div><p class="workspace-kicker">CIMPHAWNG / RESEARCH WORKSPACE</p><h1 id="workspace-title">Overview</h1><p>Explore the market. Test your ideas. Build with confidence.</p></div>
+  <div class="workspace-actions"><a href="./desk.html">Perps Desk ↗</a><a href="./token/">CIMP Testnet Lab ↗</a></div>
+</section>
 <main class="grid">
   <section class="panel" id="me" data-tab="home">
     <h2>My wallet <span>pretend $100 · play money only</span><em class="live" id="me-tag">BOT OFF</em></h2>
+    <p><a class="desk-go" href="./token/">CIMP Testnet Lab →</a> <span class="muted">Base Sepolia · test tokens only · separate from this simulated wallet</span></p>
     <div class="me">
       <div>
         <div class="muted">TOTAL VALUE</div>
@@ -454,6 +500,79 @@
     </div>
   </section>
 
+  <section class="panel" id="pbot" data-tab="bot">
+    <h2>My paper bot <span>runs on the server · pretend money</span><em class="live" id="pb-status">…</em></h2>
+    <div id="pb-off" class="muted" hidden>Paper bots start once cimphawng.com is live on the Hetzner server.</div>
+    <div id="pb-signin" class="muted" hidden>Sign in with your wallet in Paper trading (Home tab) to run your own bot.</div>
+    <div id="pb-none" class="muted" hidden>Scheduled paper bots are unavailable on this hosted release. Manual paper trading remains available. No real funds are traded.</div>
+    <div id="pb-app" hidden>
+      <div class="muted">Your bot follows one rule on closed 1-hour candles and trades your paper USDC at real Base prices. It keeps running when this page is closed.</div>
+      <div class="pb-row"><span class="muted">STRATEGY</span><div class="tfs" id="pb-strat"></div></div>
+      <div class="pb-row"><span class="muted">COIN</span><div class="tfs" id="pb-asset"></div></div>
+      <div class="pb-row"><span class="muted">BUY SIZE</span><div class="tfs" id="pb-size"></div></div>
+      <div class="muted" id="pb-rule"></div>
+      <button class="g" id="pb-go">Start bot</button>
+      <div class="kv" id="pb-kv"></div>
+      <ul class="hist" id="pb-trades"></ul>
+      <div class="pp-safety">🤖 <span>While it runs, the bot decides for your whole balance of its coin, including coins you bought yourself. It buys only when it holds none and always sells all of it.</span></div>
+    </div>
+    <div class="muted" id="pb-msg"></div>
+  </section>
+
+
+  <section class="panel" id="tbots" data-tab="bot">
+    <h2>Cimphawng Trading <span>BTC · ETH · SOL · simulated demo</span><em class="live">DEMO</em></h2>
+    <div class="muted">These are the Cimphawng Trading strategies, brought into the terminal's Bot tab. They are separate from the CIMP bot above and from your paper bot: demo prices only, no real orders, no wallet connection.</div>
+    <div class="kv">
+      <div><span>Total balance</span><b id="tb-balance">$284,739.42</b></div>
+      <div><span>Today's P&amp;L</span><b id="tb-pnl" class="tb-up">+$3,284.10</b></div>
+      <div><span>Active bots</span><b id="tb-active">3 / 4</b></div>
+      <div><span>Win rate (30d)</span><b>61.4%</b></div>
+    </div>
+    <div class="tb-row">
+      <div class="tfs" id="tb-pairs"><button data-tb-pair="BTC" class="on">BTC / USDT</button><button data-tb-pair="ETH">ETH / USDT</button><button data-tb-pair="SOL">SOL / USDT</button></div>
+      <div class="tfs" id="tb-tfs"><button data-tb-tf="1H">1H</button><button data-tb-tf="4H">4H</button><button data-tb-tf="1D" class="on">1D</button><button data-tb-tf="1W">1W</button><button data-tb-tf="1M">1M</button></div>
+    </div>
+    <div class="tb-row"><span class="tb-price" id="tb-price">$67,842.50</span><span id="tb-change" class="tb-up">+$1,240.30 (1.86%)</span><span class="muted" id="tb-meta">24h High $68,920 · 24h Low $65,410 · RSI 62.4 — Bullish</span></div>
+    <canvas id="c-tb" style="height:220px;width:100%"></canvas>
+    <div class="tb-grid" id="tb-botgrid"></div>
+    <div class="tb-stack" style="display:grid;grid-template-columns:1.2fr .8fr;gap:14px">
+      <div>
+        <h3 style="font-size:12px;color:#ecf4f7">Open positions</h3>
+        <table class="trades"><thead><tr><th>Asset</th><th>Side</th><th>Entry → Now</th><th>P&amp;L</th></tr></thead><tbody id="tb-pos"></tbody></table>
+        <h3 style="font-size:12px;color:#ecf4f7;margin-top:16px">Live trades <span class="tb-up" style="font-size:10px">● LIVE FEED</span></h3>
+        <ul class="hist" id="tb-feed"></ul>
+      </div>
+      <div>
+        <h3 style="font-size:12px;color:#ecf4f7">Quick trade (demo)</h3>
+        <div class="tfs" id="tb-side"><button data-tb-side="buy" class="on">Buy</button><button data-tb-side="sell">Sell</button></div>
+        <div style="margin:8px 0"><label class="muted">Pair</label><select id="tb-trade-pair"><option>BTC / USDT</option><option>ETH / USDT</option><option>SOL / USDT</option></select></div>
+        <div style="margin:8px 0"><label class="muted">Amount (USD)</label><input id="tb-amt" type="number" value="1000" min="10" step="10"></div>
+        <div class="muted">Est. receive <b id="tb-est" style="color:#ecf4f7">0.01474 BTC</b></div>
+        <div style="margin:10px 0"><label class="muted">Risk per trade — <span id="tb-risk">2.0%</span></label><input type="range" id="tb-risk-range" min="0.5" max="5" step="0.5" value="2" style="width:100%"></div>
+        <button class="g" id="tb-execute" style="width:100%">Execute Buy →</button>
+        <div class="muted" style="margin-top:8px">Demo only — no real order is placed.</div>
+      </div>
+    </div>
+    <div class="tb-passive">
+      <h3 style="font-size:12px;color:#ecf4f7;margin:0">Passive Mode (demo) — capital protection first</h3>
+      <div class="muted" style="margin-top:6px">Hands-off demo: protection rules run before any trade, and only a strategy that has passed walk-forward validation <em>and</em> a forward paper proof may run. Monitoring here is automated, not human traders watching 24/7. No return is promised, and no funds or keys are held.</div>
+      <div class="tb-passive-grid">
+        <div><b>BLOCKED</b><span>Protection state</span></div>
+        <div><b>0 eligible</b><span>Validated strategies</span></div>
+        <div><b>10% kill line</b><span>Max drawdown</span></div>
+      </div>
+      <div class="muted">Why blocked: no strategy is validated yet in the full app — SOL momentum, mean reversion, grid and DCA all failed out-of-sample, and BTC momentum failed too. Passive Mode therefore stays off and places no trades in this demo.</div>
+      <div class="muted" style="margin-top:8px">Protection (demo): max position 20% per coin · daily loss limit $1,000 · max order $1,000 · closing sells always allowed.</div>
+      <h4 style="font-size:12px;color:#ecf4f7;margin:14px 0 4px">Signals (demo — visible, but not passive-eligible)</h4>
+      <div class="tb-signal"><b>Momentum · SELL · strength 73</b><p>BTC, ETH and SOL: 10-day average below the 30-day average — downtrend.</p></div>
+      <div class="tb-signal"><b>Mean reversion · BUY · strength 70</b><p>All three coins below their 20-day means — oversold.</p></div>
+      <div class="tb-signal"><b>Grid · BUY · strength 70</b><p>All three coins low in their 30-day range — low grid band.</p></div>
+      <div class="tb-signal"><b>DCA · BUY · strength 50</b><p>Schedule-based tranche, regardless of price.</p></div>
+      <div class="muted" style="margin-top:8px">These signals exist, but they do not unlock passive trading until a strategy passes both proof gates.</div>
+    </div>
+  </section>
+
   <section class="panel" id="wallet" data-tab="bot">
     <h2>Bot wallet <span>0xC1M…7537 · x-Cimphawng</span><em class="live">SIM</em></h2>
     <div class="muted">ALL-TIME PNL</div>
@@ -556,13 +675,17 @@
     </div>
   </section>
 </main>
-<footer>Cimphawng Terminal — a hobby toy. The CIMP market and bot are a simulation running in your browser. Base DEX prices are real public data, read-only. No wallet or real money is involved. Not financial advice.</footer>
+<footer><a href="/setup.html">Platform setup & next steps →</a><br>Cimphawng Terminal — a hobby toy. The CIMP market and bot are a simulation running in your browser. Base DEX prices are real public data, read-only. No wallet or real money is involved. Not financial advice.</footer>
 <nav class="tabbar" id="tabbar" aria-label="Sections">
+  <a class="sidebar-brand" href="./index.html"><i>C</i>Cimphawng</a>
+  <div class="sidebar-label">WORKSPACE</div>
   <button data-go="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
   <button data-go="markets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Markets</span></button>
   <button data-go="cimp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5"/></svg><span>CIMP</span></button>
   <button data-go="bot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6"/></svg><span>Bot</span></button>
   <button data-go="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg><span>AI</span></button>
+  <a class="nav-link" href="./token/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l8 4v10l-8 4-8-4V7zM4 7l8 5 8-5M12 12v9"/></svg>CIMP Testnet Lab ↗</a>
+  <div class="sidebar-foot"><b><i></i>Simulation workspace</b>Practice with pretend funds.<br>On-chain tokens are testnet only.</div>
 </nav>
 
 
@@ -571,8 +694,8 @@
   'use strict';
 
   // ---------- constants ----------
-  const COL = { grid: '#12201f', dim: '#4f6b71', text: '#b9d3d6', green: '#39ff88', red: '#ff3b5c',
-                yellow: '#ffd23f', cyan: '#3fd8ff', orange: '#ff9f2e', white: '#e8f6f7' };
+  const COL = { grid: '#243440', dim: '#91a7b7', text: '#dce6ed', green: '#71dfb1', red: '#ff8190',
+                yellow: '#edcb8a', cyan: '#85c8ed', orange: '#e9b77c', white: '#edf5f7' };
   const ROUND = 60;          // seconds per up/down market
   const DT = 0.25;           // simulation tick (seconds)
   const SIGMA = 0.0011;      // spot vol per sqrt(second)
@@ -610,6 +733,10 @@
   // Edit the Zomi words here: left is the English text on the page, right is the Zomi.
   // {name} parts are filled in with numbers, so keep them in the Zomi text.
   const ZO = {
+    'Overview': 'Inn',
+    'CIMP simulation': 'CIMP kimawlna',
+    'Bot workspace': 'Bot nasepna',
+    'AI & system': 'AI & system',
     // header + feed
     'CIMP · 1M UP/DOWN · SIMULATED BOOK': 'CIMP · MINIT 1 UP/DOWN · KIMAWLNA',
     'MY WALLET': 'KA SUMBAWM',
@@ -677,6 +804,48 @@
     "High leverage can lose a whole trade's margin in a small move. This is for learning: there are no real orders and no real money here.":
       'Leverage sang in a kikhelna neu khat tawh trade khat margin khempeuh a mansuahsak thei hi. Hih pen sinna ding bek ahi hi: lei-zuak taktak le sum taktak om lo hi.',
     'Open Perps Desk →': 'Perps Desk hong in →',
+    'My paper bot': 'Ka kimawlna bot',
+    'runs on the server · pretend money': 'server tungah a kizang · kimawlna sum',
+    'Paper bots start once cimphawng.com is live on the Hetzner server.':
+      'cimphawng.com Hetzner server tungah a kipat ciangin kimawlna bot te kipan ding hi.',
+    "Scheduled paper bots are unavailable on this hosted release. Manual paper trading remains available. No real funds are traded.":
+      'Hih server in kimawlna bot a zang nai lo hi. Python server (Hetzner tungah cimphawng.com) tungah a kizang hi.',
+    'Sign in with your wallet in Paper trading (Home tab) to run your own bot.':
+      'Na bot mahmah zat nadingin Kimawlna lei-zuak (Home tab) ah na sumbawm tawh sign in in.',
+    'Your bot follows one rule on closed 1-hour candles and trades your paper USDC at real Base prices. It keeps running when this page is closed.':
+      'Na bot in nai khat candle a bei sa tungah dan khat zui a, na kimawlna USDC Base a man taktak tawh lei-zuak hi. Hih page na khak zongin a kizang lai ding hi.',
+    'STRATEGY': 'LAMPI',
+    'COIN': 'COIN',
+    'BUY SIZE': 'LEI ZAH',
+    'Start bot': 'Bot kipatsak in',
+    'Stop bot': 'Bot tawpsak in',
+    'Save changes': 'Khelna te koih in',
+    'While it runs, the bot decides for your whole balance of its coin, including coins you bought yourself. It buys only when it holds none and always sells all of it.':
+      'A kizang laitakin, bot in a coin na neih khempeuh, nangmah na lei te tel in, a thukhen hi. A neih loh ciang bekin lei a, a zuak ciangin khempeuh zuak hi.',
+    'Status': 'A om dan',
+    'Running': 'A kizang lai',
+    'Stopped': 'Tawp',
+    'Signal now': 'Tu-a signal',
+    'Last check': 'A nunung pen enna',
+    'Last action': 'A nunung pen a bawl',
+    'be in the coin': 'coin ah om',
+    'be out (USDC)': 'USDC ah om',
+    'no change': 'khelna om lo',
+    'waiting for candles': 'candle ngak lai',
+    'started': 'kipan',
+    'stopped': 'tawp',
+    'holding': 'kem lai',
+    'waiting for live prices': 'a man taktak ngak lai',
+    'waiting for enough price history': 'a man tangthu a cin ding ngak lai',
+    'price history is behind; waiting': 'a man tangthu a zekai; ngak lai',
+    'signal {s}; nothing to do': 'signal {s}; bawl ding om lo',
+    'bought {a} {c} for {u} USDC': '{c} {a} USDC {u} tawh lei',
+    'sold {a} {c} for {u} USDC': '{c} {a} zuak, USDC {u} ngah',
+    'could not trade: {e}': 'lei-zuak theih lo: {e}',
+    'Bot started.': 'Bot kipan zo.',
+    'Bot stopped.': 'Bot tawp zo.',
+    'Bot saved.': 'Bot koih zo.',
+    'No bot trades yet': 'Bot lei-zuak om nai lo',
     // system monitor
     'live numbers from the cimphawng.com server': 'cimphawng.com server panin nambat taktak',
     'The System monitor shows live numbers once cimphawng.com is running on the Hetzner server.':
@@ -847,6 +1016,8 @@
     for (const l of LABELS) l.node.nodeValue = l.raw.replace(l.en, tr(l.en));
     document.documentElement.lang = LANG === 'zo' ? 'ctd' : 'en';
     $('lang').textContent = LANG === 'zo' ? 'English' : 'Zomi';
+    const titles = {home:'Overview', markets:'Markets', cimp:'CIMP simulation', bot:'Bot workspace', ai:'AI & system'};
+    $('workspace-title').textContent = tr(titles[document.body.dataset.tab || 'home']);
   }
   applyLang();
 
@@ -1144,7 +1315,7 @@
     const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 12000);
     try {
       const res = await fetch(url, { signal: ctl.signal, headers: { Accept: 'application/json' } });
-      if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
+      if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; if (j?.request_id) e.message += ' (request ' + j.request_id + ')'; throw e; }
       return await res.json();
     } finally { clearTimeout(timer); }
   }
@@ -1529,15 +1700,16 @@
   // gen goes up on every change the member makes, so an older background refresh can't overwrite it
   const P = { online: false, user: null, pf: null, trades: [], busy: false, gen: 0 };
 
-  async function api(path, body) {
+  async function api(path, body, key) {
     const opts = { credentials: 'same-origin' };
     if (body !== undefined) Object.assign(opts, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (key) opts.headers['Idempotency-Key'] = key;
     const res = await fetch('/api' + path, opts);
     let j = null;
     try { j = await res.json(); } catch (e) { /* not JSON */ }
     if (!res.ok) {
       const e = new Error(j && typeof j.detail === 'string' ? j.detail : 'Error ' + res.status);
-      e.status = res.status;
+      e.status = res.status; if (j?.request_id) e.message += ' (request ' + j.request_id + ')';
       throw e;
     }
     return j;
@@ -1550,10 +1722,11 @@
   const ppNum = (v, dp) => { const n = +v; return !isFinite(n) ? '–' : n >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : n.toFixed(dp ?? (n >= 1 ? 4 : 6)).replace(/\.?0+$/, '') || '0'; };
 
   async function ppInit() {
-    try { await api('/health'); P.online = true; } catch (e) { P.online = false; }
+    try { const h = await api('/health'); P.features = h.features || {}; P.online = true; } catch (e) { P.online = false; }
     if (P.online) {
       try { P.user = await api('/me'); await ppLoad(); } catch (e) { Object.assign(P, { user: null, pf: null, trades: [] }); }
     }
+    if (P.user) { try { const pending = JSON.parse(sessionStorage.getItem('cimp-pending:' + P.user.address.toLowerCase()) || 'null'); if (pending) { if (pending.path === '/paper/swap') { $('pp-from').value = pending.data.from_asset; $('pp-to').value = pending.data.to_asset; $('pp-amt').value = pending.data.amount; } ppMsg('An earlier paper request is unresolved. Retry the same action to safely check its result.'); } } catch { /* handled before mutation */ } }
     renderPaper();
   }
   async function ppLoad() {
@@ -1562,18 +1735,27 @@
   }
 
   async function ppConnect() {
+    if (P.connecting) return;
     const eth = window.ethereum;
     if (!eth || typeof eth.request !== 'function') {
       ppMsg(tr('No wallet found. Open this site in your wallet app\'s browser (MetaMask, Coinbase Wallet, Rabby), or install a wallet extension.'), 'err');
       return;
     }
+    P.connecting = true;
+    const attempt = ++P.gen;
     try {
       ppMsg(tr('Waiting for your wallet…'));
       const [address] = await eth.request({ method: 'eth_requestAccounts' });
-      const n = await api('/auth/nonce?address=' + encodeURIComponent(address));
+      P.pendingAddress = address;
+      if (attempt !== P.gen) throw new Error('Wallet changed. Please sign in again.');
+      const chainId = parseInt(await eth.request({ method: 'eth_chainId' }), 16);
+      const n = await api('/auth/nonce?address=' + encodeURIComponent(address) + '&chain_id=' + chainId);
       const hex = '0x' + Array.from(new TextEncoder().encode(n.message), b => b.toString(16).padStart(2, '0')).join('');
       const signature = await eth.request({ method: 'personal_sign', params: [hex, address] });
-      P.user = await api('/auth/verify', { nonce: n.nonce, signature });
+      if (attempt !== P.gen) throw new Error('Wallet changed. Please sign in again.');
+      const signedUser = await api('/auth/verify', { nonce: n.nonce, signature });
+      if (attempt !== P.gen) { await api('/auth/logout', {}); throw new Error('Wallet changed. Please sign in again.'); }
+      P.user = signedUser;
       P.gen++;
       try {
         await ppLoad();
@@ -1586,6 +1768,7 @@
     } catch (e) {
       ppMsg(e && e.code === 4001 ? tr('Cancelled in your wallet.') : (e && e.message) || String(e), 'err');
     }
+    P.connecting = false; P.pendingAddress = null;
     renderPaper();
   }
 
@@ -1596,17 +1779,38 @@
       ? tr('You get about {out} {to} (0.3% fee)', { out: ppNum(amt * px(f) / px(t) * 0.997), to: t }) : '';
   }
 
+  async function paperOperation(path, data) {
+    if (!P.features?.idempotency) return api(path, data);
+    const address = P.user.address, storage = 'cimp-pending:' + address.toLowerCase();
+    let pending;
+    try { pending = JSON.parse(sessionStorage.getItem(storage) || 'null'); }
+    catch { throw new Error('Enable session storage to place paper trades safely.'); }
+    if (pending && (pending.path !== path || JSON.stringify(pending.data) !== JSON.stringify(data)))
+      throw new Error('An earlier request is unresolved. Retry the same action and amount before placing another trade or reset.');
+    pending ||= {path, data, key: crypto.randomUUID()};
+    sessionStorage.setItem(storage, JSON.stringify(pending));
+    try {
+      const result = await api(path, data, pending.key);
+      sessionStorage.removeItem(storage);
+      if (P.user?.address !== address) throw new Error('Wallet changed. Sign in again to refresh your portfolio.');
+      return result;
+    } catch (e) {
+      if ([400,401,403,415,422].includes(e.status)) sessionStorage.removeItem(storage);
+      else e.message += ' Retry the same action and amount to safely check its result.';
+      throw e;
+    }
+  }
   async function ppSwap() {
     if (P.busy) return;
     const from_asset = $('pp-from').value, to_asset = $('pp-to').value, amount = $('pp-amt').value.trim();
     if (!(+amount > 0)) { ppMsg(tr('Enter an amount.'), 'err'); return; }
     P.busy = true;
     try {
-      const r = await api('/paper/swap', { from_asset, to_asset, amount });
+      const r = await paperOperation('/paper/swap', { from_asset, to_asset, amount });
       P.gen++;
       P.pf = r.portfolio;
-      P.trades = (await api('/paper/trades?limit=6')).trades;
       $('pp-amt').value = '';
+      try { P.trades = (await api('/paper/trades?limit=6')).trades; } catch { P.trades = []; }
       ppMsg(tr('Swapped {a} {f} → {b} {t}', { a: ppNum(r.trade.amount_in), f: from_asset, b: ppNum(r.trade.amount_out), t: to_asset }), 'ok');
     } catch (e) {
       ppMsg(e.message, 'err');
@@ -1618,8 +1822,9 @@
     $('pp-off').hidden = P.online;
     $('pp-signin').hidden = !P.online || !!(P.user && P.pf);
     $('pp-app').hidden = !P.online || !P.user || !P.pf;
+    renderBot();
     const st = $('pp-status');
-    st.textContent = P.online ? '● ' + tr('LIVE') : tr('OFFLINE');
+    st.textContent = P.online ? '● PAPER API' : tr('OFFLINE');
     st.classList.toggle('err', !P.online);
     if (!P.user || !P.pf) return;
     const a = P.user.address;
@@ -1637,9 +1842,108 @@
       sel.value = cur;
     }
     $('pp-trades').innerHTML = P.trades.map(t =>
-      `<li>${esc(new Date(t.created_at).toTimeString().slice(0, 5))} · <b>${ppNum(t.amount_in)} ${esc(t.from_asset)} → ${ppNum(t.amount_out)} ${esc(t.to_asset)}</b></li>`).join('');
+      `<li>${t.source === 'bot' ? '🤖 ' : ''}${esc(new Date(t.created_at).toTimeString().slice(0, 5))} · <b>${ppNum(t.amount_in)} ${esc(t.from_asset)} → ${ppNum(t.amount_out)} ${esc(t.to_asset)}</b></li>`).join('');
     ppQuote();
   }
+
+  // ---------- my paper bot (runs on the server, trades the member's paper wallet) ----------
+  // pick = the choices on screen; they follow the server until the member changes one
+  // missing: this server has no /api/bot (e.g. the hosted preview backend), so the panel says so instead of retrying
+  const PB = { data: null, pick: null, busy: false, loading: false, gen: 0, triedAt: 0, missing: false };
+  const PB_SIZES = [25, 50, 100];
+  const PB_WANT = { in: 'be in the coin', out: 'be out (USDC)', hold: 'no change' };
+  async function pbLoad() {
+    if (P.features?.paper_bots === false) { PB.missing = true; renderBot(); return; }
+    if (!P.user || PB.loading) return;
+    const gen = PB.gen;
+    PB.loading = true;
+    PB.triedAt = Date.now();
+    try {
+      const d = await api('/bot');
+      if (gen === PB.gen) PB.data = d;  // drop it if the member changed the bot meanwhile
+    } catch (e) {
+      if (e.status === 401) PB.data = null;
+      if ([404,501].includes(e.status)) PB.missing = true;
+    } finally { PB.loading = false; renderBot(); }
+  }
+  function pbNote(n) {
+    if (!n) return '–';
+    let m;
+    if ((m = n.match(/^bought (\S+) (\S+) for (\S+) USDC$/))) return tr('bought {a} {c} for {u} USDC', { a: ppNum(m[1]), c: m[2], u: ppNum(m[3]) });
+    if ((m = n.match(/^sold (\S+) (\S+) for (\S+) USDC$/))) return tr('sold {a} {c} for {u} USDC', { a: ppNum(m[1]), c: m[2], u: ppNum(m[3]) });
+    if ((m = n.match(/^signal (\w+); nothing to do$/))) return tr('signal {s}; nothing to do', { s: tr(PB_WANT[m[1]] || m[1]) });
+    if ((m = n.match(/^could not trade: (.*)$/))) return tr('could not trade: {e}', { e: m[1] });
+    return tr(n);
+  }
+  function pbPick() {
+    const b = PB.data && PB.data.bot;
+    return PB.pick || { strategy: b ? b.strategy : 'ma', asset: b ? b.asset : 'ETH', size_pct: b ? b.size_pct : 100 };
+  }
+  async function pbSave(enabled) {
+    if (PB.busy) return;
+    PB.busy = true;
+    try {
+      PB.gen++;
+      PB.data = await api('/bot', { ...pbPick(), enabled });
+      PB.pick = null;
+      $('pb-msg').textContent = tr(enabled ? (PB.wasOn ? 'Bot saved.' : 'Bot started.') : 'Bot stopped.');
+      $('pb-msg').className = 'muted ok';
+    } catch (e) {
+      $('pb-msg').textContent = e.message;
+      $('pb-msg').className = 'muted err';
+      if (e.status === 401) { P.user = null; renderPaper(); }
+    } finally { PB.busy = false; renderBot(); }
+  }
+  function renderBot() {
+    const on = P.online && P.user;
+    $('pb-off').hidden = P.online;
+    $('pb-signin').hidden = !P.online || !!P.user;
+    $('pb-none').hidden = !on || !PB.missing;
+    $('pb-app').hidden = !on || !PB.data || PB.missing;
+    const st = $('pb-status'), b = PB.data && PB.data.bot, running = !!(b && b.enabled);
+    st.textContent = !P.online ? tr('OFFLINE') : running ? '● ' + tr('Running') : tr('PAPER');
+    st.classList.toggle('err', !P.online);
+    if (!on) { PB.data = null; PB.pick = null; return; }
+    if (PB.missing) return;
+    if (!PB.data) { if (Date.now() - PB.triedAt > 10000) pbLoad(); return; }  // at most every 10s after a failure
+    const d = PB.data, pick = pbPick(), strats = d.strategies || { ma: 'MA cross', rsi: 'RSI 30/70' };
+    const btn = (attr, v, label, cur) => `<button data-${attr}="${esc(v)}" class="${v === cur ? 'on' : ''}">${esc(label)}</button>`;
+    $('pb-strat').innerHTML = Object.entries(strats).map(([k, v]) => btn('pbs', k, tr(v), pick.strategy)).join('');
+    $('pb-asset').innerHTML = (d.assets || ['ETH', 'cbBTC']).map(a => btn('pba', a, a, pick.asset)).join('');
+    $('pb-size').innerHTML = PB_SIZES.map(n => btn('pbz', String(n), n + '%', String(pick.size_pct))).join('');
+    $('pb-rule').textContent = tr(STRATS[pick.strategy] ? STRATS[pick.strategy].rule : '');
+    const changed = !!PB.pick && !!b && ['strategy', 'asset', 'size_pct'].some(k => PB.pick[k] !== b[k]);
+    PB.wasOn = running;
+    const go = $('pb-go');
+    go.textContent = tr(!running ? 'Start bot' : changed ? 'Save changes' : 'Stop bot');
+    go.className = !running || changed ? 'g' : 'dim';
+    go.disabled = PB.busy;
+    const sig = d.signal, hm = t => new Date(t).toTimeString().slice(0, 5);
+    const row = (k, v) => `<div><span>${esc(tr(k))}</span><b>${esc(v)}</b></div>`;
+    $('pb-kv').innerHTML = row('Status', tr(running ? 'Running' : 'Stopped'))
+      + row('Signal now', sig ? tr(PB_WANT[sig.want]) + ' · ' + hm(sig.candle_at * 1000) : tr('waiting for candles'))
+      + row('Last check', b && b.last_run_at ? hm(b.last_run_at) : '–')
+      + `<div style="grid-column:1/-1"><span>${esc(tr('Last action'))}</span><b style="font-size:12px">${esc(pbNote(b && b.last_note))}</b></div>`;
+    $('pb-trades').innerHTML = (d.trades || []).length ? d.trades.map(t =>
+      `<li>🤖 ${esc(new Date(t.created_at).toTimeString().slice(0, 5))} · <b>${ppNum(t.amount_in)} ${esc(t.from_asset)} → ${ppNum(t.amount_out)} ${esc(t.to_asset)}</b></li>`).join('')
+      : `<li>${esc(tr('No bot trades yet'))}</li>`;
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-pbs],[data-pba],[data-pbz]');
+    if (!t) return;
+    const pick = { ...pbPick() };
+    if (t.dataset.pbs) pick.strategy = t.dataset.pbs;
+    if (t.dataset.pba) pick.asset = t.dataset.pba;
+    if (t.dataset.pbz) pick.size_pct = +t.dataset.pbz;
+    PB.pick = pick;
+    renderBot();
+  });
+  $('pb-go').addEventListener('click', () => {
+    const b = PB.data && PB.data.bot, running = !!(b && b.enabled);
+    const changed = !!PB.pick && !!b && ['strategy', 'asset', 'size_pct'].some(k => PB.pick[k] !== b[k]);
+    pbSave(!running || changed);
+  });
+  setInterval(() => { if (P.user && !PB.missing && !document.hidden && shown('pb-status')) pbLoad(); }, 30000);
 
   // ---------- system monitor (real numbers from /api/stats) ----------
   // state: 'loading' (nothing yet) | 'live' | 'error' (stats request failed while the server answers health checks)
@@ -1669,7 +1973,7 @@
       renderSys();
     }
   }
-  const fmtDur = s => s >= 86400 ? Math.floor(s / 86400) + 'd ' + Math.floor(s % 86400 / 3600) + 'h'
+  const fmtDur = s => s === null || s === undefined ? '–' : s >= 86400 ? Math.floor(s / 86400) + 'd ' + Math.floor(s % 86400 / 3600) + 'h'
     : s >= 3600 ? Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
   function renderSys() {
     $('sys-off').hidden = P.online;
@@ -1701,12 +2005,12 @@
       + (d.prices.refresh_ok !== null ? row('Refreshes', `<b>${d.prices.refresh_ok}</b><small class="muted">· ${d.prices.refresh_failed} ${esc(tr('failed'))}</small>`) : '')
       + (d.prices.last_error ? `<div class="sys-err">${esc(tr('Last error'))} ${esc(new Date(d.prices.last_error.at * 1000).toTimeString().slice(0, 5))}: ${esc(d.prices.last_error.error)}</div>` : '');
     const by = d.api.by_status, la = d.server.load_avg;
-    $('sys-server').innerHTML = row('Memory (peak)', `<b>${d.server.memory_peak_mb} MB</b>`)
-      + row('Load (1 / 5 / 15 min)', `<b>${la.map(x => x ?? '–').join(' / ')}</b><small class="muted">· ${d.server.cpus} CPU</small>`)
+    $('sys-server').innerHTML = row('Memory (peak)', `<b>${d.server.memory_peak_mb === null ? 'Not exposed' : d.server.memory_peak_mb + ' MB'}</b>`)
+      + row('Load (1 / 5 / 15 min)', `<b>${la.map(x => x ?? '–').join(' / ')}</b><small class="muted">· ${d.server.cpus ?? '–'} CPU</small>`)
       + row('Database', d.db.ok === false ? `<b class="down">${esc(d.db.engine)} · ${esc(d.db.error)}</b>`
         : `<b>${esc(d.db.engine)}</b><small class="muted">· ${d.db.size_mb ?? '–'} MB</small>`)
       + row('Responses', `<b class="up">${by['2xx']}</b><small class="muted">2xx ·</small><b>${by['3xx']}</b><small class="muted">3xx ·</small><b class="mid">${by['4xx']}</b><small class="muted">4xx ·</small><b class="down">${by['5xx']}</b><small class="muted">5xx</small>`)
-      + row('Python', `<b>${esc(d.server.python)}</b>`);
+      + row('Runtime', `<b>${esc(d.server.runtime || ('Python ' + d.server.python))}</b>`);
     drawSys();
   }
   function drawSys() {
@@ -1738,7 +2042,8 @@
   function setTab(t, scroll) {
     if (!TABS.includes(t)) t = 'home';
     document.body.dataset.tab = t;
-    document.querySelectorAll('.tabbar [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === t));
+    $('workspace-title').textContent = tr({home:'Overview', markets:'Markets', cimp:'CIMP simulation', bot:'Bot workspace', ai:'AI & system'}[t]);
+    document.querySelectorAll('.tabbar [data-go]').forEach(b => { b.classList.toggle('on', b.dataset.go === t); b.setAttribute('aria-current', b.dataset.go === t ? 'page' : 'false'); });
     try { localStorage.setItem('cimphawng-tab', t); } catch (e) { /* ignore */ }
     if (scroll && getComputedStyle($('tabbar')).display !== 'none') scrollTo(0, 0);
     drawMe(); drawDex(); sysPoll();
@@ -2205,6 +2510,20 @@
   $('dex-tfs').addEventListener('click', e => { const b = e.target.closest('[data-tf]'); if (b) dexSelect(undefined, b.dataset.tf); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) dexTick(); });
   addEventListener('resize', () => drawDex());
+  async function ppWalletChanged(accounts) {
+    if (!P.user && !P.pendingAddress) return;
+    const active = P.user ? P.user.address : P.pendingAddress;
+    if (Array.isArray(accounts) && accounts[0] && accounts[0].toLowerCase() === active.toLowerCase()) return;
+    P.gen++;
+    Object.assign(P, { user: null, pf: null, trades: [] });
+    renderPaper();
+    try { await api('/auth/logout', {}); } catch (e) { /* local identity remains cleared */ }
+    ppMsg('Wallet changed. Sign in again to access that wallet’s paper portfolio.');
+  }
+  if (window.ethereum && typeof window.ethereum.on === 'function') {
+    window.ethereum.on('accountsChanged', ppWalletChanged);
+    window.ethereum.on('chainChanged', ppWalletChanged);
+  }
   $('pp-connect').addEventListener('click', ppConnect);
   $('pp-go').addEventListener('click', ppSwap);
   $('pp-amt').addEventListener('input', ppQuote);
@@ -2222,9 +2541,11 @@
     ppMsg(''); renderPaper();
   });
   $('pp-reset').addEventListener('click', async () => {
+    if (P.busy || !P.user) return;
     if (!confirm(tr('Reset your paper account to 100 USDC?'))) return;
-    try { P.gen++; P.pf = await api('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
-    renderPaper();
+    P.busy = true;
+    try { P.gen++; P.pf = await paperOperation('/paper/reset', {}); P.trades = []; ppMsg(''); } catch (e) { ppMsg(e.message, 'err'); }
+    P.busy = false; renderPaper();
   });
   // keep the portfolio's values fresh while signed in
   setInterval(async () => {
@@ -2286,5 +2607,82 @@
   requestAnimationFrame(frame);
 })();
 </script>
+
+<script>
+(function(){
+  const PRICES={BTC:{price:67842.5,change:1.86,high:68920,low:65410},ETH:{price:3524.18,change:2.41,high:3610,low:3380},SOL:{price:171.42,change:-0.84,high:178.2,low:166.4}};
+  let curPair='BTC', curTF='1D', side='buy';
+  const bots=[
+    {id:1,name:'Momentum Alpha',pair:'BTC / USDT \u00b7 Trend Following',roi:'+42.8%',win:'71%',trades:184,profit:'+$12,840',on:true,spark:[12,18,15,22,28,24,32,38,34,42]},
+    {id:2,name:'Grid Master',pair:'ETH / USDT \u00b7 Grid Trading',roi:'+28.3%',win:'66%',trades:512,profit:'+$8,210',on:true,spark:[8,12,10,14,13,18,16,20,19,24]},
+    {id:3,name:'Mean Reversion Pro',pair:'SOL / USDT \u00b7 Mean Reversion',roi:'+19.6%',win:'63%',trades:97,profit:'+$3,940',on:true,spark:[10,8,14,11,16,13,18,15,20,19]},
+    {id:4,name:'Scalper X',pair:'BTC / USDT \u00b7 1m Scalping',roi:'+8.1%',win:'58%',trades:1240,profit:'+$1,120',on:false,spark:[20,18,19,16,17,15,16,14,15,13]}
+  ];
+  const $=id=>document.getElementById(id);
+  const fmt=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function sparkSVG(data){
+    const max=Math.max(...data),min=Math.min(...data),w=260,h=36;
+    const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-min)/(max-min||1))*(h-6)-3}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:36px;width:100%"><polyline points="${pts}" fill="none" stroke="#39ff88" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+  function renderBots(){
+    $('tb-botgrid').innerHTML=bots.map(b=>`<article class="tb-bot"><div class="tb-top"><div><h3>${b.name}</h3><p>${b.pair}</p></div><button class="tb-toggle ${b.on?'on':''}" aria-label="Toggle ${b.name}" data-tb-bot="${b.id}"></button></div>${sparkSVG(b.spark)}<div class="tb-stats"><div><b>${b.roi}</b><span>ROI 30d</span></div><div><b>${b.win}</b><span>Win rate</span></div><div><b>${b.trades}</b><span>Trades</span></div></div><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--dim)">Profit</span><b class="tb-up">${b.profit}</b><span>${b.on?'\u25cf RUNNING':'\u25cb PAUSED'}</span></div></article>`).join('');
+    const active=bots.filter(b=>b.on).length;
+    $('tb-active').textContent=active+' / 4';
+  }
+  $('tb-botgrid').addEventListener('click',e=>{const b=e.target.closest('[data-tb-bot]');if(!b)return;const bot=bots.find(x=>x.id===+b.dataset.tbBot);bot.on=!bot.on;renderBots();});
+  const positions=[
+    {sym:'BTC',side:'LONG',entry:64210,now:67842,pnl:'+$4,218',pct:'+5.65%'},
+    {sym:'ETH',side:'LONG',entry:3310,now:3524,pnl:'+$1,864',pct:'+6.47%'},
+    {sym:'SOL',side:'SHORT',entry:182.4,now:171.42,pnl:'+$642',pct:'+6.02%'}
+  ];
+  $('tb-pos').innerHTML=positions.map(p=>`<tr><td><b>${p.sym}</b></td><td>${p.side}</td><td style="font-size:11px">$${fmt(p.entry)} \u2192 $${fmt(p.now)}</td><td><b class="tb-up">${p.pnl}</b><div class="tb-up" style="font-size:11px">${p.pct}</div></td></tr>`).join('');
+  let feedItems=[
+    {s:'BUY',t:'Bought 0.084 BTC @ $67,810',bot:'Momentum Alpha'},
+    {s:'SELL',t:'Sold 1.20 ETH @ $3,518',bot:'Grid Master'},
+    {s:'BUY',t:'Bought 42 SOL @ $170.90',bot:'Mean Reversion'}
+  ];
+  function renderFeed(){$('tb-feed').innerHTML=feedItems.map(f=>`<li><b class="${f.s==='BUY'?'tb-up':'tb-down'}">${f.s}</b> ${f.t} \u00b7 ${f.bot}</li>`).join('');}
+  function genData(seed,len){
+    let v=seed,arr=[];for(let i=0;i<len;i++){v+=(Math.random()-0.42)*seed*0.018;arr.push(v)}
+    const info=PRICES[curPair],lo=info.low*1.004,hi=info.high*0.996,mn=Math.min(...arr),mx=Math.max(...arr);
+    return arr.map(x=>lo+((x-mn)/(mx-mn||1))*(hi-lo));
+  }
+  function drawChart(){
+    const canvas=$('c-tb');if(!canvas)return;const rect=canvas.getBoundingClientRect();if(rect.width<10)return;
+    const dpr=window.devicePixelRatio||1;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const W=rect.width,H=rect.height,pad=14;
+    const len=curTF==='1H'?48:curTF==='4H'?60:curTF==='1W'?42:56;
+    const data=genData(PRICES[curPair].price*0.94,len);data[data.length-1]=PRICES[curPair].price;
+    const min=Math.min(...data)*0.998,max=Math.max(...data)*1.002;
+    const x=i=>pad+i*(W-pad*2)/(data.length-1),y=v=>H-18-((v-min)/(max-min))*(H-36);
+    ctx.strokeStyle='#16262b';ctx.lineWidth=1;for(let i=0;i<5;i++){const yy=pad+i*(H-30)/4;ctx.beginPath();ctx.moveTo(pad,yy);ctx.lineTo(W-pad,yy);ctx.stroke()}
+    const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'rgba(57,255,136,0.28)');grad.addColorStop(1,'rgba(57,255,136,0)');
+    ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.lineTo(x(data.length-1),H);ctx.lineTo(x(0),H);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+    ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.strokeStyle='#39ff88';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.stroke();
+    ctx.beginPath();ctx.arc(x(data.length-1),y(data[data.length-1]),5,0,Math.PI*2);ctx.fillStyle='#39ff88';ctx.fill();
+  }
+  function setPair(p){
+    curPair=p;const d=PRICES[p];
+    document.querySelectorAll('#tb-pairs button').forEach(b=>b.classList.toggle('on',b.dataset.tbPair===p));
+    $('tb-price').textContent='$'+fmt(d.price);
+    const ch=$('tb-change');ch.textContent=`${d.change>=0?'+':''}$${fmt(Math.abs(d.price*d.change/100))} (${d.change>=0?'+':''}${d.change}%)`;ch.className=d.change>=0?'tb-up':'tb-down';
+    $('tb-meta').textContent=`24h High $${fmt(d.high)} \u00b7 24h Low $${fmt(d.low)} \u00b7 RSI 62.4 \u2014 Bullish`;
+    updateEst();drawChart();
+  }
+  $('tb-pairs').addEventListener('click',e=>{const b=e.target.closest('[data-tb-pair]');if(b)setPair(b.dataset.tbPair);});
+  $('tb-tfs').addEventListener('click',e=>{const b=e.target.closest('[data-tb-tf]');if(!b)return;curTF=b.dataset.tbTf;document.querySelectorAll('#tb-tfs button').forEach(x=>x.classList.toggle('on',x===b));drawChart();});
+  function updateEst(){const amt=parseFloat($('tb-amt').value||0);const pair=$('tb-trade-pair').value.split(' ')[0];const price=PRICES[pair]?.price||PRICES.BTC.price;$('tb-est').textContent=(amt/price).toFixed(5)+' '+pair;}
+  $('tb-amt').addEventListener('input',updateEst);$('tb-trade-pair').addEventListener('change',updateEst);
+  $('tb-risk-range').addEventListener('input',e=>$('tb-risk').textContent=parseFloat(e.target.value).toFixed(1)+'%');
+  $('tb-side').addEventListener('click',e=>{const b=e.target.closest('[data-tb-side]');if(!b)return;side=b.dataset.tbSide;document.querySelectorAll('#tb-side button').forEach(x=>x.classList.toggle('on',x===b));$('tb-execute').textContent=`Execute ${side==='buy'?'Buy':'Sell'} \u2192`;});
+  $('tb-execute').addEventListener('click',()=>{const btn=$('tb-execute');const orig=btn.textContent;btn.textContent='\u2713 Order simulated \u2014 check Live trades';feedItems.unshift({s:side==='buy'?'BUY':'SELL',t:`${side==='buy'?'Bought':'Sold'} via Quick Trade \u00b7 $${$('tb-amt').value}`,bot:'Manual'});feedItems=feedItems.slice(0,5);renderFeed();setTimeout(()=>btn.textContent=orig,2000);});
+  setInterval(()=>{const pairs=[['BTC',67842],['ETH',3524],['SOL',171]];const p=pairs[Math.floor(Math.random()*pairs.length)];const isBuy=Math.random()>0.45;feedItems.unshift({s:isBuy?'BUY':'SELL',t:`${isBuy?'Bought':'Sold'} ${(Math.random()*0.4+0.02).toFixed(3)} ${p[0]} @ $${fmt(p[1]+(Math.random()*40-20))}`,bot:['Momentum Alpha','Grid Master','Mean Reversion Pro'][Math.floor(Math.random()*3)]});feedItems=feedItems.slice(0,5);renderFeed();},4200);
+  document.addEventListener('click',e=>{if(e.target.closest('[data-go="bot"]'))setTimeout(drawChart,80);});
+  window.addEventListener('resize',drawChart);
+  renderBots();renderFeed();updateEst();setPair('BTC');
+})();
+</script>
+
 </body>
 </html>

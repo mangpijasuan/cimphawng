@@ -22,6 +22,7 @@ as profit whatever the outcome. That's the game the bot plays:
 | Neural shell | Model inputs → rotating particle "brain" → order-router outputs (eye candy driven by live values) |
 | Resolution funnel | Price path this round plus the ±1σ/±2σ volatility cone to settlement |
 | Running combined VWAP | Cost of every recent set vs the $1.00 payout, with the running average |
+| Cimphawng Trading | Demo BTC/ETH/SOL bots (Momentum Alpha, Grid Master, Mean Reversion Pro, Scalper X) on the Bot tab, separate from the CIMP bot |
 
 ## My wallet ($100 pretend mode)
 
@@ -51,6 +52,21 @@ On phones (screens up to 760px wide) the terminal turns into an app-style layout
 | **AI** | The neural-shell animation |
 
 Only the open tab's charts are drawn, which saves battery. The app remembers the last tab you used. Desktop keeps the full terminal.
+
+## Cimphawng Trading (demo, Bot tab)
+
+The Cimphawng Trading dashboard is integrated into `index.html` as a `data-tab="bot"` panel
+(`#tbots`), styled with the terminal's own variables and scoped `tb-` classes so it
+does not clash with existing panels. It adds:
+
+- BTC/ETH/SOL pair and timeframe switching with a canvas chart
+- Four toggleable demo bots with sparklines, ROI, win rate and trade counts
+- Open positions, a live demo trades feed, and a Quick Trade panel
+- Passive Mode (demo, capital protection first): blocked with 0 eligible strategies, because no strategy has passed walk-forward validation and a forward paper proof yet; protection stats, kill line, and demo signals are shown, but no passive trade is placed
+- Mobile stacking for the panel: bot grid, passive grid, and positions/Quick Trade stack to one column on phone, with 44px tap targets, so the panel does not overflow the viewport
+
+All Cimphawng Trading numbers are simulated demo data, separate from the CIMP bot wallet
+and from paper trading. Quick Trade places no real order.
 
 ## Perps Desk (paper-only learning lab): `desk.html`
 
@@ -149,6 +165,8 @@ The `server/` folder holds the Python API that will run on Hetzner at cimphawng.
 
 - **Wallet sign-in** (Sign-In with Ethereum). Members sign a free message in their own wallet. The server never sees keys.
 - **Paper trading** for every member: 100 pretend USDC to swap between USDC, ETH and cbBTC at **real** Base DEX prices, with a 0.3% fee.
+- **Paper bots** for every member: pick MA cross or RSI 30/70 (the backtest's rules), ETH or cbBTC, and a buy size. The
+  bot runs on the server on closed 1-hour candles and trades your paper wallet, even with the page closed.
 
 `infra/` has the Docker Compose, Caddy (automatic HTTPS) and PostgreSQL setup. See [server/README.md](server/README.md)
 for the API, and [docs/DEPLOY.md](docs/DEPLOY.md) for step-by-step Hetzner setup.
@@ -159,7 +177,11 @@ The web page's **Paper trading** panel (on the Home / Inn tab) uses the server:
 - See your pretend portfolio, swap with a live "you get about…" preview, see your last trades, reset, and sign out.
 - It says clearly that Cimphawng never asks for a seed phrase, and that signing in is free.
 
-On GitHub Pages there's no server, so the panel just says paper trading starts once cimphawng.com is live.
+The **My paper bot** panel (on the Bot tab) sets up, starts and stops your bot. It shows the current signal, when it
+last checked, what it did, and its trades (also marked 🤖 in your Home tab history). While it runs, the bot decides for
+your whole balance of its coin.
+
+On GitHub Pages there's no server, so these panels just say they start once cimphawng.com is live.
 
 The **System** panel on the AI tab shows live numbers from the server, all real and none personal, refreshed every 5 seconds while it's on screen:
 
@@ -183,3 +205,18 @@ It's a single file with no build step:
 - Open `index.html` in any browser, or
 - Serve it: `python3 -m http.server` then visit http://localhost:8000, or
 - Host it free with GitHub Pages (Settings → Pages → deploy from branch, root folder).
+
+## CIMP Testnet Lab
+
+Open [token/](token/) from the Home wallet card to deploy or load a **Cimphawng Test Token**
+on **Base Sepolia (chain 84532)**. This is a separate experimental ERC-20 with a provisional
+fixed supply of 1,000,000 test CIMP, minted once to the deploying wallet. The contract blocks
+mainnet deployment. No token is deployed just by opening the page or merging this code.
+
+The lab checks the selected contract's runtime bytecode and supply before showing its balance
+or enabling transfers. Deployment and transfers require the user's own browser wallet approval
+and Base Sepolia test ETH for gas. It never asks for a private key or seed phrase.
+
+**Simulation balances, paper balances, and simulated bot profits cannot be redeemed for test tokens.**
+No price, liquidity pool, rewards entitlement, or mainnet tokenomics is introduced.
+See [the deployment guide](docs/CIMP-TESTNET.md) for testing, deployment, and verification.

@@ -1,0 +1,25 @@
+name: Hosted paper API tests
+on:
+  pull_request:
+    paths: ['hosted/**','index.html','ui.css','desk.html','token/**','guide.html','account*','status*','beta.css','.github/workflows/hosted-api-tests.yml']
+  push:
+    branches: [main,'claude/hobby-project-app-webapp-nmtkai']
+    paths: ['hosted/**','index.html','ui.css','desk.html','token/**','guide.html','account*','status*','beta.css','.github/workflows/hosted-api-tests.yml']
+permissions:
+  contents: read
+concurrency:
+  group: hosted-api-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node hosted/scripts/release.mjs --check
+      - run: node --test hosted/tests/backend.test.mjs
+      - run: node hosted/scripts/ship-check.mjs
+      - run: node --check hosted/worker.mjs
+      - run: node hosted/prepare-assets.mjs

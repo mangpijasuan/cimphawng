@@ -1,0 +1,12 @@
+{
+  "name": "cimphawng-hosted-api",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test": "node --test tests/backend.test.mjs",
+    "ship-check": "node scripts/ship-check.mjs"
+  }
+}
