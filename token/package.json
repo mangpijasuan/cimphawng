@@ -16,5 +16,10 @@
     "ganache": "7.9.2",
     "playwright": "1.62.1",
     "solc": "0.8.38"
+  },
+  "overrides": {
+    "solc": {
+      "tmp": "0.2.7"
+    }
   }
 }
