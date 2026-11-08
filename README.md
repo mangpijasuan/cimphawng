@@ -65,6 +65,7 @@ does not clash with existing panels. It adds:
 - Passive Mode (demo, capital protection first): blocked with 0 eligible strategies, because no strategy has passed walk-forward validation and a forward paper proof yet; protection stats, kill line, and demo signals are shown, but no passive trade is placed
 - Mobile stacking for the panel: bot grid, passive grid, and positions/Quick Trade stack to one column on phone, with 44px tap targets, so the panel does not overflow the viewport
 - Market Sphere (demo snapshot): a static circular network graph of the top 60 coins by market cap on three rings by rank, with node size by market cap, colour by 24h move (amber for USD-pegged stablecoins), arcs between coins whose 24h moves agree within 1.5 points, and a spoke from the paper-equity hub to the held coin (XRP). Tapping a node or chip shows that coin's snapshot details; it does not load the coin in the live app or place a trade. Telemetry, a 24h-move histogram, per-strategy signal dots, and the walk-forward verdict donut (0 pass / 5 fail / 2 inconclusive) are shown from the same snapshot: CoinGecko top-100 ranking as of Nov 8, 2026, 10:31 AM CST, quotes as of 10:29 AM CST and flagged STALE in the full app; paper equity $99,640.15, drawdown -0.61%.
+- Brand logo: the red/navy C mark, embedded in the terminal header in `index.html` (the same logo used in the full Cimphawng Trading app).
 
 All Cimphawng Trading numbers are simulated demo data, separate from the CIMP bot wallet
 and from paper trading. Quick Trade places no real order.
