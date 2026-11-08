@@ -120,7 +120,7 @@
   #pbot .pb-row .tfs { margin: 0; }  /* ui.css gives .tfs a bottom margin; rows here line up with their label */
   #pb-rule { margin-top: 8px; }
   #pb-go { margin-top: 10px; }
-  .pp-safety { border: 1px solid #1f4a2e; background: rgba(57,255,136,.06); color: var(--text); padding: 8px 10px; margin: 10px 0; font-size: 11px; }
+  .pp-safety { border: 1px solid #25344a; background: rgba(154,201,255,.07); color: var(--text); padding: 8px 10px; margin: 10px 0; font-size: 11px; }
   .pp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .pp-head code { color: var(--cyan); }
   .pp-swap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
@@ -143,7 +143,7 @@
   .bt-kv { grid-template-columns: repeat(3, 1fr); }
   .bt-kv b.up { color: var(--green); } .bt-kv b.down { color: var(--red); }
 
-  #me { border-color: #1f4a2e; box-shadow: inset 0 0 40px rgba(57,255,136,.04); }
+  #me { border-color: #25344a; box-shadow: inset 0 0 40px rgba(154,201,255,.04); }
   .me { display: grid; grid-template-columns: 1.1fr 1fr 1.3fr; gap: 14px; }
   .me-total { font-size: 30px; font-weight: 800; color: #fff; margin: 2px 0; }
   .me-total small { font-size: 13px; margin-left: 8px; }
@@ -211,7 +211,7 @@
   /* ---------- phone app view (tabs + cards), desktop stays a terminal ---------- */
   .tabbar, .ico { display: none; }
   @media (max-width: 760px) {
-    :root { --mbg: #080e16; --card: #141f2b; --card2: #26333f; --mgreen: #5ad67d; --mblue: #7fb8ff; --morange: #f5a524; }
+    :root { --mbg: #060910; --card: #111b2b; --card2: #25344a; --mgreen: #9ac4f7; --mblue: #7fb8ff; --morange: #f5a524; }
     html, body { background: var(--mbg); }
     body { font-family: "Poppins", system-ui, -apple-system, sans-serif; font-size: 13px; letter-spacing: 0;
            padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
@@ -222,8 +222,8 @@
              flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 10px; }
     header::-webkit-scrollbar { display: none; }
     .brand, .hs-up, .hs-dn, .hs-sum, #h-clock, .feed, .hdr-stats .lbl { display: none; }
-    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #183b30;
-            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #2d5d4d; }
+    .logo { flex: none; width: 50px; height: 50px; min-width: 0; padding: 0; border-radius: 16px; background: #172b46;
+            color: #fff; font-size: 12px; box-shadow: inset 0 0 0 2px #304a6d; }
     .hdr-stats { margin: 0; flex-wrap: nowrap; gap: 10px; }
     .hdr-stats > .chip, .hdr-stats > button { flex: none; height: 50px; padding: 0 14px; border-radius: 16px; background: #13211d;
             border: 2px solid var(--card2); display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #fff; cursor: pointer; }
@@ -257,7 +257,7 @@
     .btns button { flex: 1; padding: 12px 6px; border: 0; border-radius: 14px; background: var(--card); font-size: 14px; font-weight: 600; }
     .btns button.g { color: var(--mgreen); } .btns button.r { color: #ff6b81; } .btns button.c { color: var(--mblue); }
     .btns button.dim { color: #8b90a8; }
-    .btns button.c.on { background: var(--mgreen); color: #0c1a11; box-shadow: 0 4px 0 #3a9d57; }
+    .btns button.c.on { background: var(--mgreen); color: #0d203b; box-shadow: 0 4px 0 #3b5b83; }
     .hist li { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; white-space: normal; font-size: 12px; }
     .risk .riskbar, .riskbar i { border-radius: 4px; }
 
@@ -269,7 +269,7 @@
     button.dcard.on { border-color: var(--mgreen); box-shadow: none; }
     .tfs { gap: 6px; }
     .tfs button { flex: 1; padding: 7px 0; border: 0; border-radius: 10px; background: var(--card); font-weight: 600; }
-    .tfs button.on { background: var(--mgreen); color: #0c1a11; }
+    .tfs button.on { background: var(--mgreen); color: #0d203b; }
     table.trades, table.book { border-collapse: separate; border-spacing: 0; background: var(--card); border-radius: 16px; padding: 6px; font-size: 11px; }
 
     .tiles { grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -289,8 +289,8 @@
     .sys-cols { grid-template-columns: 1fr; }
     .sys-row { padding: 9px 2px; font-size: 13px; }
     .pp-swap button { padding: 12px 16px; border-radius: 12px; border: 0; background: var(--card); font-weight: 600; }
-    #pp-go { background: var(--mgreen); color: #0c1a11; box-shadow: 0 4px 0 #3a9d57; }
-    #pp-connect { width: 100%; padding: 14px; border-radius: 14px; border: 0; background: var(--mgreen); color: #0c1a11; font-size: 15px; font-weight: 700; box-shadow: 0 4px 0 #3a9d57; }
+    #pp-go { background: var(--mgreen); color: #0d203b; box-shadow: 0 4px 0 #3b5b83; }
+    #pp-connect { width: 100%; padding: 14px; border-radius: 14px; border: 0; background: var(--mgreen); color: #0d203b; font-size: 15px; font-weight: 700; box-shadow: 0 4px 0 #3b5b83; }
     .sigrow { background: var(--card); border: 0; border-radius: 16px; padding: 12px; gap: 12px; }
     .sigrow .pill { border-radius: 10px; padding: 8px 6px; font-size: 13px; min-width: 88px; }
     .sigrow b { font-size: 14px; } .sigrow small { font-size: 11px; }
@@ -306,14 +306,14 @@
     /* floating tab bar */
     .tabbar { display: flex; position: fixed; z-index: 30; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
               height: 76px; padding: 6px; border-radius: 38px;
-              background: linear-gradient(135deg, #162a22, #102019);
+              background: linear-gradient(135deg, #0d1320, #060910);
               -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
               box-shadow: 0 12px 32px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.3); }
     .tabbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
                      padding: 0; border: 0; border-radius: 32px; background: transparent; color: #fff; font-size: 11px; font-weight: 500; }
     .tabbar button:hover { background: rgba(255,255,255,.08); }
     .tabbar svg { width: 26px; height: 26px; }
-    .tabbar button.on { color: #6dff97; font-weight: 600; background: rgba(29,65,48,.65); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+    .tabbar button.on { color: #c3dcfa; font-weight: 600; background: rgba(25,45,73,.95); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
     table.book td { text-align: right; }
     table.book tr.ask td:first-child, table.book tr.bid td:first-child { text-align: left; padding-left: 10px; }
   }
@@ -336,9 +336,9 @@
   .tb-up{color:var(--green)} .tb-down{color:var(--red)}
   .tb-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
   #tbots .tfs button.on{background:#214535;color:var(--green);border-color:#385e49}
-  .tb-passive{border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:16px;background:#0b141d}
+  .tb-passive{border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:16px;background:var(--panel)}
   .tb-passive-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
-  .tb-passive-grid div{background:#14212b;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+  .tb-passive-grid div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
   .tb-passive-grid b{display:block;font-size:13px;color:#ecf4f7} .tb-passive-grid span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
   .tb-signal{border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0;background:#14212b}
   .tb-signal b{color:#ecf4f7} .tb-signal p{margin:4px 0 0;color:var(--dim);font-size:11px}
@@ -356,7 +356,7 @@
 </style>
 <link rel="stylesheet" href="./ui.css">
 </head>
-<body class="terminal"><aside style="margin:12px;padding:14px 20px;border:1px solid #234354;border-radius:16px;background:#0d2028;color:#c9e9e0;font:14px/1.6 system-ui"><strong>Private beta · Learn with paper funds.</strong> Guest demo stays in this browser. Wallet sign-in saves your pretend $100 portfolio. Token Lab uses testnet tokens. Real trading and scheduled bots are unavailable.<nav aria-label="Beta help"><a href="/guide">Getting started &amp; privacy</a> · <a href="/account">Your account</a> · <a href="/status">Service status</a></nav></aside>
+<body class="terminal"><aside style="margin:12px;padding:14px 20px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);font:14px/1.6 system-ui"><strong>Private beta · Learn with paper funds.</strong> Guest demo stays in this browser. Wallet sign-in saves your pretend $100 portfolio. Token Lab uses testnet tokens. Real trading and scheduled bots are unavailable.<nav aria-label="Beta help"><a href="/guide">Getting started &amp; privacy</a> · <a href="/account">Your account</a> · <a href="/status">Service status</a></nav></aside>
 <header>
   <div class="logo">CIMP</div>
   <div class="brand">Cimphawng<small>Market research & simulation</small></div>

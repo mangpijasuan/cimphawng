@@ -33,9 +33,15 @@ The deployed audience remains owner-private. No mainnet token, real trading, pai
 
 The repository's default branch is `claude/hobby-project-app-webapp-nmtkai`; `main` is older. Use the validated release branch/PR commit, not an assumed `main`.
 
-From the repository root, run `node hosted/scripts/release.mjs --check`. After intentionally changing any release input, regenerate with `node hosted/scripts/release.mjs`, test and review the diff. Before cutting a build, also run `node hosted/scripts/ship-check.mjs`. The Site uses the same release script as `scripts/release.mjs`; the input mapping normalizes the Site's public assets and the repository's root assets. `GET /api/release` must match the generated `hosted/lib/release.mjs` fingerprint. This checks core API/schema/migrations and listed application assets, not the entire hosting infrastructure.
+GitHub is the canonical source for release inputs. The Site repository retains its Vinext
+wrapper, hosting configuration and generated release provenance.
 
-Native Site versions retain exact source and deployment provenance. Publish only the tested source archive and preserve private audience. Do not copy credentials into Git, logs or issue reports.
+1. After reviewing changes, regenerate the fingerprint with `node hosted/scripts/release.mjs` from the GitHub root. Commit it with the changes. Run `node hosted/scripts/ship-check.mjs` and wait for the reviewed PR's CI.
+2. Check out the merged GitHub commit with a clean working tree. Open the existing Site source with the Sites workflow, then run `node hosted/scripts/stage-site.mjs /absolute/site/checkout <merged-github-sha>`. The command stages the shared API, schema, migrations, vendored dependencies and public asset allowlist without replacing hosting configuration or data.
+3. In the Site checkout run `node scripts/release.mjs --check`, build and test, then package and publish the exact Site source commit. Record the GitHub commit, fingerprint, Site commit, saved version and deployment IDs. Preserve the private audience.
+4. Verify the live authenticated `/release-provenance.json` and `/api/release` against the reviewed commit and generated fingerprint. The hash covers shared release inputs; the native Site version identifies the deployment wrapper and artifact. A successful deploy alone is not evidence of parity.
+
+Site edits to shared release files should go through GitHub first. Do not commit credentials to either repository or expose them in logs.
 
 ## Operational runbook
 
