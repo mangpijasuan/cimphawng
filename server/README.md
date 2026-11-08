@@ -1,7 +1,7 @@
 # Cimphawng API
 
 Python (FastAPI) server for wallet sign-in and paper trading at real Base DEX prices.
-Part of step 3 in [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md). Deployment: [docs/DEPLOY.md](../docs/DEPLOY.md).
+See the [architecture](../docs/ARCHITECTURE.md) for how this server differs from the hosted private beta. Deployment: [docs/DEPLOY.md](../docs/DEPLOY.md).
 
 ## Endpoints
 

@@ -1,467 +1,126 @@
-# Cimphawng Architecture
+# Cimphawng architecture
 
-This document describes two things:
+**Decision proposal · November 8, 2026 · Scope: spot paper trading**
 
-1. **Today:** how the Cimphawng Terminal works right now. It is a single static web page. The CIMP market is simulated, and the Base DEX panel reads real prices (read-only).
-2. **Target:** the design for growing it into a full-stack crypto platform for **you and the Zomi community**. It
-   covers real prices from **decentralized exchanges (DEXs)**, analysis, paper trading and, last of all, automated
-   trading with real money. It runs on a Hetzner server at **cimphawng.com**.
+Cimphawng should become an auditable paper-trading terminal for the Zomi community. The next release should make each fill explainable, keep trading safe during a feed outage, and prove that an operator can recover the system. Preserve the near-black navy terminal, Zomi and English, the browser demo, and the separate CIMP Testnet Lab.
 
-The target design is a **plan**, not built yet. Section 10 records what has been decided and what is still open.
+## What runs today
 
----
+| Surface | Current implementation | Boundary |
+| --- | --- | --- |
+| Private hosted terminal | Sites / Vinext Worker with D1. Wallet sign-in, paper swaps and resets, operation receipts, account export and deletion, health and readiness. | Owner-private. Hosted scheduled bots and live trading are disabled. |
+| Standalone hosted adapter | `hosted/worker.mjs`, D1 migrations and shared Worker API in GitHub. | A separate deployment option; equivalent build and deployment provenance must be verified. |
+| Python server | `server/app`, FastAPI, SQLAlchemy, Alembic, PostgreSQL deployment configuration and a paper-bot runner. | A separate implementation, not the private Site's backend. Its feature set and paper account state differ. |
+| Browser labs | Terminal simulation, research demos and paper Perps Desk. | Browser-local state and model assumptions. These do not create hosted fills. |
+| Token Lab | Base Sepolia test ERC-20 and wallet-controlled signing. | Separate assets and identity context. No redemption, production token issuance or trading authority. |
 
-## 1. Guiding principles
+Baseline reviewed: GitHub `8052896e8f3b181435cfbd5ededdeb99e0046fd8` and private Site source `9fddc4258c2d630e41b74fe0d73ec625670d84a6`. The checked-out inputs differ in terminal HTML, shared CSS, desk HTML, beta CSS and the hosted API. GitHub's fingerprint check failed at that baseline. Fixing the fingerprint in GitHub only validates its own inputs; it does not reconcile the two sources. Treat the prior cbBTC feed degradation as a failure case to reproduce and monitor, not a current incident without a fresh probe.
 
-- **Real money comes last.** Every feature moves up the same ladder: **simulated → paper (real prices, pretend money) → live, small → live**.
-  Nothing skips a rung.
-- **Non-custodial: members keep their own coins.** Cimphawng never holds, moves or signs for a community member's money.
-  Members connect their own wallet (MetaMask, Rabby, Coinbase Wallet and others), and every real trade a member makes is approved and signed
-  **in their own wallet**. This keeps members in control of their own funds, and keeps Cimphawng out of the legal and security
-  burden of looking after other people's money.
-- **Automated real-money trading is for the owner's wallet only.** The server-side bot trades only from the owner's dedicated,
-  small "bot wallet". Community members get analysis, paper-trading bots and one-tap trades they sign themselves.
-- **One code path, swappable edges.** A strategy runs the same code in a backtest, in paper trading and live.
-  Only the *data source* and the *execution adapter* change, so what we test is what we run.
-- **Only one component can sign.** The execution service is the only part that can use the bot wallet's private key,
-  and every transaction passes a separate risk check and a simulation first.
-- **Keys never leave the server.** The bot wallet's private key is never stored in the repo, the browser or the frontend.
-- **Zomi first.** Everything a user sees goes through the translation list, with Zomi as the default and English as the alternative.
+The current Worker already has useful protections: integer amounts, conditional writes, per-account idempotency keys, stale-price checks, and session revocation. Gaps include a request-driven reference-price cache, no persisted quote-to-fill provenance, no reconciled journal, two backend implementations, and no recorded hosted recovery drill. See [launch readiness](LAUNCH-READINESS.md) for evidence and open gates.
 
----
+## Target system and ownership
 
-## 2. Today: the static terminal
-
-The whole app is one file, `index.html` (HTML, CSS and JavaScript, with no build step), hosted on GitHub Pages.
-There is no server. The CIMP market and bot are a simulation that runs in the browser. The **Base DEX** panel reads real ETH and cbBTC prices
-from public APIs (read-only, no wallet).
+Use a **modular monolith** with a FastAPI application and PostgreSQL for the next durable paper system. Start with an API process and a separately runnable background worker built from the same versioned code. Use the current Worker/D1 for the private beta until a rehearsed cutover. Keep PostgreSQL as the sole writer after cutover. Keep the browser on a same-origin API so routing changes do not become session or CORS workarounds.
 
 ```mermaid
-flowchart LR
-    subgraph Browser["Browser (index.html)"]
-        LOOP["Main loop<br/>requestAnimationFrame"] -->|"fixed 0.25s ticks × speed"| SIM
-        subgraph SIM["Simulation"]
-            NEWS["News events"] --> SPOT["CIMP spot price<br/>random walk"]
-            SPOT --> MKT["1-min UP/DOWN market<br/>fair value + asks"]
-            MKT --> BOT["Bot<br/>complete-set arbitrage"]
-            BOT --> SETTLE["Round settlement"]
-        end
-        SIM --> WALLET["My wallet<br/>$100 pretend"]
-        BOT -.->|"copy 10%"| WALLET
-        SIM --> RENDER["Renderers<br/>canvas panels + DOM text"]
-        WALLET --> RENDER
-        I18N["Zomi / English<br/>ZO word list"] --> RENDER
-        WALLET <--> LS[("localStorage")]
-        I18N <--> LS
-    end
-    GH["GitHub Pages"] -->|"serves index.html"| Browser
+flowchart TD
+    Terminal["Terminal"] --> API["API and identity"]
+    API --> Orders["Orders and risk"]
+    Orders --> Fill["Paper fill engine"]
+    Fill --> DB[("PostgreSQL")]
+    Orders --> DB
+    Feed["Approved market sources"] --> Worker["Ingestion and job worker"]
+    Worker --> DB
+    DB --> Read["Portfolio and audit views"]
+    Read --> API
+    DB --> Worker
+    Worker --> Ops["Telemetry and reconciliation"]
 ```
 
-### 2.1 Modules inside `index.html`
-
-The script is one self-contained function, split into these sections (search for `// ----------`):
-
-| Section | Responsibility |
-|---|---|
-| constants | `ROUND` = 60s market, `DT` = 0.25s tick, `SIGMA` volatility, `EDGE` = 1.5¢ minimum set edge, 1-second candles |
-| language | `ZO` English→Zomi word list, `tr()` lookup, swapping static labels, remembered language choice |
-| simulation state | `S`: spot price, candles, order book, bot stats, current round, news |
-| price news | `fireNews()`: random headlines that move the price over 6–12s. Part of each move sticks through a slowly relaxing "anchor" price |
-| `tick()` | Advances the world by one step: news → spot price → candles → book → UP/DOWN fair value and asks → bot → settlement |
-| bot | `botStep()` decides trades. `buy()` records fills and pairs UP and DOWN legs first-in, first-out (FIFO) into complete sets. `settle()` pays out when the round ends |
-| my wallet | `W`: cash, CIMP holdings, optional copy-trading of the bot, saved to `localStorage` |
-| Base DEX live data | Finds the top USDC pool for ETH and cbBTC on Base, then polls GeckoTerminal for pool stats (30s), candles (60s) and trades (30s), falling back to DexScreener for prices. Pauses while hidden, backs off on errors (15s up to 5 min). About 5 requests a minute |
-| derived metrics | Volatility, momentum, book imbalance, tilt and round mark-to-market, recomputed for each frame |
-| canvas helpers and panels | One draw function per panel (equity, matrix, arcs, spot, funnel, VWAP, neural shell, wallet chart) |
-| phone tabs | Below 760px wide, panels are grouped into five tabs (`data-tab` on each panel) with a floating tab bar. Charts on hidden tabs are skipped |
-| main loop | Fixed-step simulation, redraws throttled (see below), a warm-up of about 40 rounds at start |
-
-### 2.2 Timing
-
-| What | How often |
-|---|---|
-| Simulation tick | Every 0.25s of simulated time (×1, ×4 or ×16 speed) |
-| Neural shell | Every animation frame |
-| Other charts | Every 120ms |
-| Text, order book, feed, wallet | Every 250ms |
-| Wallet value history | Every 1s |
-
-### 2.3 Stored data (browser only)
-
-| Key | Contents |
-|---|---|
-| `cimphawng-wallet-v1` | Cash, CIMP amount and cost, bot copy on/off, bot P/L, last 20 actions. Open bot positions are refunded at cost when saved |
-| `cimphawng-lang` | `zo` or `en` |
-| `cimphawng-base-pools-v1` | The discovered Base pool addresses, cached for 24 hours |
-| `cimphawng-tab` | The last phone tab opened (`home`, `markets`, `cimp`, `bot`, `ai`) |
-
-Both are wrapped in `try/catch`, so the page still works where storage is blocked.
-
-### 2.4 Known limits of today's design
-
-- One file of about 1,200 lines, which is fine for now but will get hard to change as features grow.
-- Everything is per-browser: no accounts, no sync between devices, and the bot stops when the tab closes.
-- Real prices depend on free public APIs and their rate limits. Every visitor's browser calls them directly.
-- No tests. It is checked by driving it in a headless browser.
-
----
-
-## 3. Target: full-stack DEX platform on Hetzner
-
-### 3.1 Which chain
-
-A DEX lives on a blockchain, so the first real choice is the chain. The recommendation is to **start with Base**,
-an Ethereum layer-2:
-
-- **Low fees:** a swap usually costs cents, not dollars, which matters for small community trades and for bots.
-- **Deep DEX liquidity:** Uniswap and Aerodrome, with native USDC, ETH and cbBTC.
-- **Portable code:** Base is EVM-compatible, so the same Python code (`web3.py`) and the same wallets (MetaMask, Rabby, Coinbase Wallet)
-  also work on Arbitrum, BNB Chain, Polygon and Ethereum. Adding another EVM chain later is mostly configuration.
-- **Easy to see:** block explorers and free price APIs cover it well.
-
-Solana (Jupiter, Raydium) is the main alternative. It would need a different code path and different wallets,
-so it's better added later, not first. This is still an open decision (section 10).
-
-### 3.2 System overview
-
-```mermaid
-flowchart TB
-    subgraph Client["Phone / desktop"]
-        WEB["Cimphawng web app<br/>Zomi / English"]
-        MW["Member's own wallet<br/>(MetaMask, Rabby, ...)"]
-        WEB <-->|"connect, sign in,<br/>approve own trades"| MW
-    end
-
-    subgraph Hetzner["Hetzner server · cimphawng.com (Docker Compose)"]
-        CADDY["Caddy<br/>HTTPS + reverse proxy"]
-        API["API server<br/>REST + WebSocket,<br/>wallet sign-in"]
-        ING["Chain data ingestor"]
-        ANA["Analysis + backtest"]
-        ENG["Strategy engine<br/>(bot runner)"]
-        RISK["Risk manager"]
-        EXE["Execution service<br/>paper / live"]
-        REDIS[("Redis")]
-        PG[("PostgreSQL + TimescaleDB")]
-        KEY[("Encrypted<br/>bot-wallet key")]
-    end
-
-    subgraph Chain["Base blockchain"]
-        RPC["RPC provider<br/>(read + send tx)"]
-        DEX["DEX contracts<br/>Uniswap · Aerodrome"]
-    end
-    PRICE["Price + OHLCV APIs<br/>GeckoTerminal · DexScreener"]
-    AGG["DEX aggregator<br/>quote + route API"]
-    ALERT["Telegram alerts"]
-
-    WEB <-->|"HTTPS / WSS"| CADDY --> API
-    MW -->|"member signs + sends own swap"| RPC
-    ING -->|"Swap events, pool prices"| RPC
-    ING -->|"history backfill"| PRICE
-    ING --> REDIS & PG
-    REDIS --> API & ENG
-    API --> PG
-    API -->|"quotes for member trades"| AGG
-    API -->|"backtest jobs"| ANA --> PG
-    ENG -->|"order intents"| RISK -->|"approved"| EXE
-    EXE -->|"quote"| AGG
-    EXE --> KEY
-    EXE -->|"simulate, sign, send<br/>(owner's bot wallet only)"| RPC
-    RPC --- DEX
-    EXE --> PG & REDIS
-    RISK & EXE --> ALERT
-```
-
-### 3.3 Components
-
-| Component | Job | Notes |
-|---|---|---|
-| **Web app** | Terminal UI: charts, analysis, pretend and real portfolios, bot controls | Connects to the member's wallet in the browser. Split into modules with a small build step (Vite) once the server exists |
-| **Member's wallet** | The member's own keys. Signs the sign-in message and the member's own trades | Cimphawng never sees seed phrases or private keys |
-| **Caddy** | HTTPS certificates, reverse proxy, serving the web app | Only ports 80 and 443 are open to the internet |
-| **API server** | Wallet sign-in, REST and WebSocket, member portfolios, quotes for member trades | Builds unsigned trades for members to review. **Never signs for them** |
-| **Chain data ingestor** | Watches chosen DEX pools: swap events and pool prices over the RPC WebSocket, candles built from swaps, history backfilled from price APIs, gas prices | Reconnects automatically, fills gaps, handles chain reorgs |
-| **Analysis + backtest** | Indicators (moving averages, RSI, MACD, volatility, support/resistance), liquidity and volume stats, backtests that include swap fees, slippage and gas | Uses the same strategy code as the live engine |
-| **Strategy engine** | Runs bots on live data and emits **order intents** ("swap 50 USDC → ETH") | Paper bots for everyone. A live bot only for the owner's bot wallet. Cannot sign anything |
-| **Risk manager** | Checks every intent against limits and allowlists | See section 5 |
-| **Execution service** | Quote → build transaction → simulate → sign with the bot wallet → send → confirm → record | The **only** holder of the bot-wallet key. `paper` adapter fills at real quoted prices, including slippage and gas, without sending anything |
-| **PostgreSQL + TimescaleDB** | Users (wallet addresses), strategies, candles, paper and real trades, positions, audit log | Backed up daily |
-| **Redis** | Latest prices, pub/sub between services, job queue | Can be rebuilt, so it is not the source of truth |
-
-### 3.4 Tech stack
-
-| Layer | Choice | Why |
-|---|---|---|
-| Backend language | **Python 3.12** (decided) | Best fit for analysis and trading work |
-| API framework | FastAPI + Uvicorn | Async, built-in WebSocket support, automatic API docs |
-| Blockchain | `web3.py` | Mature EVM library: read pools, decode events, build, simulate and sign transactions |
-| Sign-in | Sign-In with Ethereum (SIWE, EIP-4361) | Members log in by signing a free message in their wallet. No passwords, no gas, no money moves |
-| Data + analysis | pandas, numpy, a technical-analysis library | Indicators and backtests |
-| Database | PostgreSQL 16 + TimescaleDB, SQLAlchemy + Alembic | Reliable, handles candle time series, managed schema changes |
-| Cache / messaging | Redis | Simple pub/sub and queues |
-| Frontend wallet | `viem` + standard wallet discovery (EIP-6963), WalletConnect for mobile wallets | Works with browser-extension and phone wallets |
-| Testing | pytest, plus **Anvil** (Foundry) to fork Base locally | Test real swaps against a copy of the chain, with no real money |
-| Runtime | Docker Compose on one Hetzner server | Simple to run and to move |
-| CI/CD | GitHub Actions: test, build images, deploy over SSH | A merge to `main` deploys |
-| Monitoring | Structured logs, health checks, Uptime Kuma or Grafana, Telegram alerts | Know within a minute when a bot, feed or RPC stops |
-
----
-
-## 4. Key flows
-
-### 4.1 Member signs in with their wallet
-
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant W as Member's wallet
-    participant A as API server
-    B->>A: request sign-in message (nonce)
-    A-->>B: "Sign in to cimphawng.com, nonce 123…"
-    B->>W: ask to sign message
-    W-->>B: signature (free, no transaction)
-    B->>A: address + signature
-    A->>A: verify signature matches address
-    A-->>B: session cookie (member or owner role)
-```
-
-### 4.2 Member makes a real swap (signed in their own wallet)
-
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant A as API server
-    participant G as DEX aggregator
-    participant W as Member's wallet
-    participant C as Base chain
-    B->>A: quote: 50 USDC → ETH
-    A->>A: check token allowlist + slippage cap
-    A->>G: best route
-    G-->>A: route, expected amount out, unsigned tx
-    A-->>B: preview in Zomi: "You pay 50 USDC, get at least 0.0x ETH, fee ~$0.01"
-    B->>W: member reviews + approves
-    W->>C: signed swap sent by member's wallet
-    C-->>B: confirmed
-    B->>A: tx hash → recorded in member's portfolio
-```
-
-### 4.3 Owner's bot places a trade (automated)
-
-```mermaid
-sequenceDiagram
-    participant S as Strategy engine
-    participant K as Risk manager
-    participant E as Execution service
-    participant G as DEX aggregator
-    participant C as Base chain (RPC)
-    participant D as Postgres
-    S->>K: intent: swap 50 USDC → ETH
-    alt within limits, allowlisted, kill switch off
-        K->>E: approved
-        E->>G: quote + route
-        E->>E: set minimum amount out (slippage cap) + deadline
-        E->>C: simulate (eth_call / estimate gas)
-        alt simulation OK and gas under cap
-            E->>E: sign with bot-wallet key (next nonce)
-            E->>C: send transaction
-            C-->>E: receipt after N confirmations
-            E->>D: record actual amounts from Swap events
-            E-->>S: fill report
-        else simulation fails
-            E-->>S: skipped (logged + alert)
-        end
-    else breaks a rule
-        K-->>S: rejected (reason logged + alert)
-    end
-```
-
-The execution service manages **nonces** (transaction numbers) for the bot wallet itself, so transactions never collide,
-and it replaces stuck transactions with higher-fee versions. It also regularly **reconciles** its records against
-the wallet's real on-chain balances.
-
----
-
-## 5. Safety
-
-### 5.1 For the owner's automated bot (step 5)
-
-| Guard | What it does |
-|---|---|
-| Separate bot wallet | A new wallet used **only** by the bot, holding only what it's allowed to trade. Savings stay in a hardware or cold wallet that is never on the server. Top-ups are done by hand |
-| Encrypted key | The bot-wallet key is stored encrypted. The decryption key comes from the server environment, never the repo |
-| Token + pool allowlist | The bot only trades reviewed tokens and pools (e.g. ETH, USDC, cbBTC). This blocks scam, honeypot and fee-on-transfer tokens |
-| Exact approvals | Token spending approvals only for known router contracts, and only for the amount needed. No unlimited approvals |
-| Slippage cap + deadline | Every swap sets a minimum amount out (e.g. at most 0.5–1% worse than quoted) and expires after a short deadline |
-| Simulate first | Every transaction is simulated before sending, and skipped if it would fail |
-| Gas caps | A maximum fee per transaction and a daily gas budget |
-| Trade limits | Per-trade size, position size per token, total exposure |
-| Daily loss limit | The bot stops for the day after losing a set amount |
-| Kill switch | One button (and a Telegram command) stops every bot immediately |
-| Stale-data guard | No trading if prices are old or the RPC or feed is down |
-| Confirmations | A trade is final only after several block confirmations, so reorgs are handled |
-| Front-running protection | Base has no public mempool, which makes sandwich attacks much harder. Tight slippage caps still apply. On Ethereum mainnet, send through a private RPC |
-| Audit log | Every intent, check, simulation, transaction and fill is recorded |
-| Promotion rule | A strategy goes live only after **several weeks of paper trading** on the same code, and then with small limits |
-
-### 5.2 For the Zomi community
-
-- **Never ask for a seed phrase.** The site says clearly, in Zomi and English, that Cimphawng will **never** ask for a seed phrase or private key.
-  Scammers often pretend to be community tools, so this message is shown where members connect their wallet.
-- **Clear previews.** Before a member signs anything, the site explains in plain Zomi what they pay, the minimum they receive and the fee.
-- **Same allowlists and slippage caps** apply to member swaps built by the API.
-- **No managed money.** Members can copy a strategy in paper mode, or make a one-tap trade they sign themselves. Cimphawng does not run
-  bots with members' funds. Doing that would mean holding or controlling other people's money, which brings legal duties.
-  Revisit only with proper legal advice.
-- **No promises.** The site never promises profits, and analysis is labelled as education, not financial advice.
-- **Privacy.** A member is identified only by wallet address plus an optional display name. No email or ID is needed.
-
----
-
-## 6. Server, domain and hosting
-
-- **Domain:** use **cimphawng.com** as the main address. It's the most familiar ending and has no residency rules. `.us` domains
-  require a US connection (a US citizen, resident or organisation). If both are registered, redirect `cimphawng.us` to `cimphawng.com`.
-- **Addresses:** one origin keeps things simple: `cimphawng.com` for the web app, `cimphawng.com/api` for REST and `cimphawng.com/ws` for live data.
-  With one origin, sign-in cookies work with no cross-site setup.
-- **Before the server (steps 1–2):** GitHub Pages can serve `cimphawng.com` with a custom domain. At step 3, point the DNS
-  (A/AAAA records) at the Hetzner server instead.
-- **Server:** one Hetzner Cloud server (2–4 vCPU, 4–8 GB RAM) running Ubuntu LTS. That is plenty for the ingestor, database, API and bots.
-  The blockchain itself is reached through an RPC provider, so no full Base node is needed.
-- **Access:** SSH keys only (password login off), a non-root deploy user, Hetzner firewall allowing only 22, 80 and 443, `fail2ban`,
-  automatic security updates.
-- **Deploy:** `docker compose` with one service per component. GitHub Actions builds the images and deploys on merge to `main`.
-- **Backups:** nightly `pg_dump` to a Hetzner Storage Box plus server snapshots. Restores are tested.
-- **Secrets:** a `.env` file on the server only (RPC keys, bot-key passphrase, Telegram token), listed in `.gitignore`, never committed.
-
----
-
-## 7. Roadmap mapped to components
-
-| Step | Adds | Where it runs | Real money? |
-|---|---|---|---|
-| **Now** | Simulated terminal, $100 wallet, news events, Zomi/English, CIMP | GitHub Pages | No |
-| **1. Real DEX prices** ✅ | Live ETH and cbBTC prices, candles and trades from their top USDC pools on Base, next to CIMP. GeckoTerminal API, DexScreener fallback | Browser only. Can move to `cimphawng.com` via GitHub Pages | No |
-| **2. Analysis** ✅ | MA20/MA50, RSI 14, volatility, crossover signals, and a backtest (MA cross or RSI 30/70, 0.3% fee, no lookahead) on up to 300 candles. More Base coins still to choose | Browser | No |
-| **3. Full stack + community** 🚧 | Hetzner server, wallet sign-in, member profiles, ingestor, database, paper-trading bots for every member. **Part 1 done:** API with wallet sign-in and paper swaps at live prices, PostgreSQL, Caddy, Docker Compose, deploy guide, CI tests. **Part 2 done:** web app Connect-wallet button and paper-trading panel. **System monitor done:** public `/api/stats` and a System panel (AI tab) with real server, traffic, price-feed, database and community numbers. **Paper bots done:** each member can run one bot (MA cross or RSI 30/70, the backtest's rules) on ETH or cbBTC; it trades their paper wallet on closed 1-hour candles, on the server, with a "My paper bot" panel on the Bot tab. **Alembic migrations done.** **Next:** WalletConnect for phone wallets without an in-app browser, a separate ingestor and Redis once more services need live data | Hetzner · cimphawng.com | No |
-| **4. Member one-tap swaps** | Quotes and Zomi previews. Members sign and send swaps from **their own wallet**. Portfolio tracking from the chain | Hetzner + member wallets | Yes, the member's own, signed by them |
-| **5. Owner's automated bot** | Execution service live adapter, bot wallet, every section 5.1 guard, alerts | Hetzner | Yes, the owner's bot wallet only |
-| **Perps Desk** ✅ (paper) | `desk.html` learning lab (section 8): volatility-scaled leverage tickets, approval, guards, dashboard | Browser now; server engine later | No. Live is owner-only, after section 8.4 |
-
-> **Step 3 part 1 simplifications.** The price feed runs inside the API process, as one shared GeckoTerminal poller for
-> all members. Redis isn't used yet. These change when several services need the same live data.
->
-> **Paper bots** run in the API process too, as one runner for all members. Every minute it looks for a newly closed
-> 1-hour candle (from the same GeckoTerminal pools as the prices) and lets each running bot act on it once. Bot trades go
-> through the same swap code, live prices, fee and stale-price guard as a member's own swaps. A row lock on each bot means
-> that even two runners can never act twice on one candle. Schema changes are Alembic migrations, applied on start-up.
-
-### 7.1 Repository layout (from step 3)
-
-```
-cimphawng/
-├── web/                 # frontend (today's index.html, split into modules)
-├── server/
-│   ├── api/             # FastAPI: wallet sign-in, REST, WebSocket, member quotes
-│   ├── ingest/          # chain data ingestor (pools, swaps, candles, gas)
-│   ├── analysis/        # indicators + backtester
-│   ├── engine/          # strategy runner + strategies
-│   ├── risk/            # risk manager, allowlists, limits
-│   └── execution/       # paper + live adapters, nonce manager, signer
-├── infra/               # docker-compose.yml, Caddyfile, deploy scripts
-├── docs/                # this file and other docs
-└── .github/workflows/   # CI/CD
-```
-
----
-
-## 8. Feature: Perps Desk (paper-only learning lab)
-
-`desk.html` is a separate page for learning how **leveraged perpetual futures** behave, using real market data and
-pretend money. It's linked from the Bot tab with a risk warning, and is not part of members' paper portfolios.
-
-### 8.1 How it fits the principles
-
-| Principle (section 1) | How the Perps Desk follows it |
-|---|---|
-| Real money comes last | **Paper only.** The page has no exchange key, wallet or order code. Live trading is a later, separate step (8.4) |
-| Non-custodial | It never holds anyone's coins. A future live mode would be **owner-only** and **never** trade members' funds |
-| Only one component can sign | Nothing can sign today. A live mode would go through the execution service and risk manager like every other order |
-| Zomi first | Zomi/English switch, sharing the main site's language choice |
-| Same safety guards as the bot (5.1) | Daily loss limit, kill switch, stop after a run of losses, per-trade and total margin limits, stale-data guard, decision log |
-
-### 8.2 Rules (from the owner's brief)
-
-- **Coins:** BTC, ETH, SOL, AVAX, SUI.
-- **Market data:** Hyperliquid's public data, a decentralized perpetuals exchange on its own chain. This is the
-  one place Cimphawng looks beyond Base, because Base has no comparable perps market for these coins.
-- **Hard rule:** leverage ≈ target return on margin ÷ expected move, where the expected move ≈ 1h ATR(14) × 2. A smaller move
-  means higher leverage. It never goes above 30x or the coin's own maximum, and prefers 26x or less.
-- **Direction:** follow the coin's short-term bias and the board's lean (shorts on a red day).
-- **Size:** 50% of equity as margin per trade, and at most 70% of equity in margin in total.
-- **Slippage:** skip if walking the order book would give more than 0.3%.
-- **Exits:** take-profit at the expected move, stop-loss at ⅓ of it. The stop must sit well inside the liquidation
-  price, otherwise leverage is lowered.
-- **Approval:** every ticket needs the user's **Approve**, and tickets expire after 5 minutes.
-
-### 8.3 Guards
-
-| Guard | Default | Effect |
-|---|---|---|
-| Daily loss limit | 20% of the day's starting equity (adjustable 5–30%) | No new tickets for the rest of the UTC day |
-| Losses in a row | 3 (adjustable 2–5) | No new tickets until the next UTC day or **Resume** |
-| Kill switch | Button | Closes every paper position at market and stops all tickets until **Resume** |
-| Margin limits | 50% per trade, 70% total | Checked when proposing **and** again when approving |
-| Stale data | Market data must load | No tickets while data is offline |
-| Fresh price at approval | Price refreshed when you press Approve | Fills at the current price. Refused if prices are stale or moved more than half the stop distance since the ticket |
-| Missed exits | 1-minute candles replayed after the page was hidden or closed | A TP/SL/liquidation touched while away is still applied, worst case first |
-| Liquidation | Checked before stop and target | Booked as losing the whole margin (conservative) |
-
-### 8.4 Path to live (owner only, not built)
-
-1. Run it in paper mode for several weeks, and record whether the rule actually makes money after fees and funding.
-2. Move the logic to the server's **strategy engine** (section 3.3), so it runs 24/7 with history in PostgreSQL, behind the same
-   **risk manager**.
-3. Add a Hyperliquid **execution adapter** using a separate, small, owner-only account with an API wallet that can't withdraw.
-4. Get legal advice first: perpetual futures are restricted or unavailable in many countries, including the US.
-
-Members never get a live version. For the community it stays a paper learning lab.
-
-## 9. What "DEX" changes compared with a centralized exchange
-
-| Topic | Centralized exchange | DEX (this design) |
-|---|---|---|
-| Account | Username + API keys | A wallet address, with no account needed |
-| Placing a trade | API call | A signed blockchain transaction that costs gas |
-| Custody | The exchange holds coins | The wallet owner holds coins |
-| Prices | Order book | Liquidity pools. Price depends on trade size (slippage) |
-| Main risks | Exchange hacks and freezes | Key theft, scam tokens, bad approvals, slippage, failed transactions |
-| Market data | Exchange WebSocket | RPC events and public price and indexer APIs |
-
----
-
-## 10. Decisions
-
-### 10.1 Decided
-
-| Decision | Choice |
-|---|---|
-| Trading venue | **DEX first**, EVM chains |
-| Users | **The owner and the Zomi community**, non-custodial |
-| Backend language | **Python** |
-| Domain | **cimphawng.com**, with cimphawng.us as an optional redirect |
-| Server | **Hetzner** |
-| Perps Desk | A **paper-only learning lab** on Hyperliquid data with the owner's leverage rule and the section 8.3 guards. Live trading is owner-only and only after section 8.4 |
-
-### 10.2 Still open
-
-| Decision | Options | Recommendation |
-|---|---|---|
-| First chain | Base, Arbitrum, BNB Chain, Solana | **Base**: low fees, deep liquidity, works with common wallets |
-| DEXs and quotes | Direct Uniswap/Aerodrome contracts, or an aggregator (0x, 1inch, Odos) | Aggregator for best prices on member swaps. Direct pool reads for data |
-| RPC provider | Alchemy, QuickNode, Infura or public RPC | Start on a free tier, and add a second provider as backup |
-| Starting token list | e.g. ETH, USDC, cbBTC | Start small and review before adding tokens |
-| CIMP mainnet | Purpose, supply, distribution, and launch remain undecided | Keep the terminal simulated. A separate Base Sepolia test token lab is implemented; see [CIMP-TESTNET.md](CIMP-TESTNET.md). No mainnet launch or paper balance conversion |
-| Domain purchase | Register cimphawng.com (and .us if eligible) | Register soon so the name is secured |
-
-## 11. CIMP Testnet Lab
-
-`token/` is a separate static page backed by a fixed-supply OpenZeppelin ERC-20. It uses only Base Sepolia in the browser; the constructor also allows local development chain IDs 31337 and 1337. Wallet approvals happen in the user’s wallet. The compiled artifact, runtime bytecode, and explorer verification input are built from pinned dependencies. Contract selection is verified against the exact runtime artifact and total supply. No API custody, real trading, pool, or token distribution service is added. See [CIMP-TESTNET.md](CIMP-TESTNET.md).
+| Module | Owns | Rule |
+| --- | --- | --- |
+| API and identity | Sessions, membership, authorization, request validation, API versioning | Wallet ownership grants access to an account. Operator access is separate and explicitly assigned. |
+| Market data | Instrument registry, source adapters, normalized observations, quality and freshness | Only validated observations may drive paper fills. Browser feeds are display-only. |
+| Orders and risk | Idempotency, order transitions, eligibility, limits, pause state | Manual and strategy orders use one command path. A strategy emits intents and cannot write balances. |
+| Paper fills and ledger | Fill model, atomic settlement, immutable economic events, balance projection | Only this module posts journal entries. A fill cannot exist without its balanced entries. |
+| Jobs and reconciliation | Scheduled refresh, outbox consumption, integrity checks and alerts | Workers handle retries and duplicate deliveries explicitly; they cannot bypass risk or write directly to balances. |
+| Research | Versioned datasets, strategy versions, backtests, experiment reports | Read-only access to approved inputs. No production order or ledger writes. |
+
+No Redis, separate message broker, Kubernetes, or timeseries extension is required for the first release. Measure database, worker and API load before adding infrastructure. Select and price the production host after checking backups, access controls and support; the existing Hetzner files are an option, not evidence of a production deployment.
+
+## Market data: provenance before execution
+
+1. **Identify instruments unambiguously.** Use chain, token contract, decimals and quote currency, plus reviewed pool identifiers. Treat ETH/WETH and cbBTC as distinct from unrelated ticker matches. Track provider permissions, attribution, retention and approved use.
+2. **Refresh independently of user requests.** Schedule per-instrument fetches with deadlines, bounded retries and backoff. Store provider, pool, provider event time when available, ingest time, precision and quality. Handle missing provider timestamps explicitly: fetch time alone does not prove market freshness. Keep the previous valid record after a failed refresh.
+3. **Distinguish reference, indicative and executable prices.** A pool reference can mark a portfolio; it does not imply fillable size. For the initial simulator, use a documented, bounded size/fee/slippage model. Record the inputs and model version. Display estimated costs and reject when depth is missing or the order exceeds the model's approved size. Model a USD peg assumption explicitly where used.
+4. **Set quality rules per instrument.** Reject stale, malformed, future-dated, mismatched or materially divergent observations. An alternate source must pass the same validation; never substitute synthetic prices or the wrong asset. Allow fresh unaffected instruments to continue while a stale instrument is paused.
+5. **Record what a fill used.** Persist quote ID, normalized observations, model and fee versions, expiration, approved amount, worst acceptable output and risk policy version. Revalidate expiration and eligibility at commit. If a reference feed fails, show the last observation with age and suppress affected fills.
+
+The initial scope is the existing Base spot instruments. On-chain indexing, historical data licensing and an independent fallback source each need their own evaluation. If raw on-chain events are introduced, record block hashes and track provisional, confirmed and invalidated observations; prove the gap-fill and reorg path before using them in decisions.
+
+## Order, risk and ledger contracts
+
+Introduce versioned commands under `/api/v2` in staging, while preserving existing private beta routes. Start with immediate spot paper orders only. Do not show partially filled, cancelable or resting orders until the backend actually supports them.
+
+| Contract | Minimum behavior |
+| --- | --- |
+| Quote | Account and instrument, input quantity, estimate and bound, fees, observation IDs, expires-at and model version. Missing or expired quote cannot fill. |
+| Order | Stable server ID and account-scoped client key, canonical payload hash, explicit terminal outcome and correlation ID. Identical retry returns the stored outcome; same key with a different payload returns a conflict. |
+| Risk decision | Allowlisted instrument, sufficient available funds, size and exposure limits, fresh data, active account epoch and pause state. Record reason, policy version and quote reference. |
+| Fill and journal | Fixed-point amounts with explicit asset precision and rounding, separate principal and fee entries, and an atomic transaction linking order, decision, fill and journal. No negative member balances. |
+| Portfolio | Read model derived from journal entries, carrying a last-applied checkpoint and valuation freshness. Reconcile projections and expose an explicit degraded state on drift. |
+
+Inside the write transaction: resolve the idempotency key, lock the relevant account/position rows in a consistent order, then recheck funds, quote expiry and risk. Persist the accepted outcome, journal and outbox together. Roll back the entire write on error; retry transient transaction conflicts only under the same key and bounded retry policy. Keep upstream HTTP calls outside that transaction. Return the committed outcome on timeout/retry. Retain receipts for the documented replay window; do not allow expired requests to silently become new orders.
+
+For a paper swap, each asset balances independently. If a member spends 100 paper USDC including a 0.30 USDC fee, debit 100 from the member, credit 99.70 to simulated liquidity and 0.30 to a fee account. In the acquired asset, debit simulated liquidity and credit the member by the same amount. Portfolio reset closes one account epoch and opens another with a grant entry; it cannot alter prior fills or allow an old request to post into the new epoch. Correct errors using reversal entries and a recorded reason.
+
+Suggested schema: `instruments`, `market_observations`, `paper_quotes`, `paper_orders`, `risk_decisions`, `paper_fills`, `journal_transactions`, `journal_entries`, `balance_projections`, `operation_receipts`, `outbox`, `processed_events` and `reconciliation_runs`. Give events unique IDs, schema versions, request correlation, actor references and UTC timestamps. Do not duplicate wallet addresses or other personal data across payloads. Define retention, deletion and backup handling before opening access; keep the identity mapping separate from economic entries. Pseudonymized records still need a retention and privacy review.
+
+A worker delivers committed outbox events with retry/backoff and idempotent consumers. Track lease ownership and dead-letter exceptions. Treat downstream delivery as repeatable, not exactly once. Reconcile replayed journal balances, projected balances and fill/receipt counts. Freeze affected paper writes on unexplained discrepancies and require reviewed resolution.
+
+## Security, operations and research gates
+
+- **Identity and operator actions:** retain domain-bound, single-use wallet challenges and secure sessions. Define member and operator scopes. Require stronger operator authentication, least privilege and reviewed changes to risk limits or resume controls. Maintain paper, research and testnet isolation; no server-side signing key or mainnet submission route in this design.
+- **Pause and resume:** an operator pause blocks new fills through the same transactional risk path. It leaves reads and audit access available. Resume after fresh observations and reconciliation pass; record actor, reason and time. Test pauses under concurrent orders.
+- **Release controls:** one canonical GitHub commit per release, repeatable asset assembly, fingerprint and artifact digest verification, CI evidence, staged migration and smoke checks. Record the GitHub commit and resulting Site commit/version when both are used. Include intended divergence explicitly; never infer source parity from a successful deploy.
+- **Observability:** separately measure API availability, quote age and feed rejects by instrument, fill commits and duplicates, reconciliation drift, worker lag, and restore performance. Use request/order correlation IDs in restricted logs; omit signatures, cookies and raw credentials. Check that alerts reach an assigned operator.
+- **Research:** freeze strategy and dataset versions, include fee/slippage assumptions, use time-ordered evaluation without future data, and record out-of-sample and forward-paper results. Paper strategies are opt-in, versioned, capped and pauseable. Scheduling must deduplicate each strategy/instrument/candle/configuration decision.
+- **Live work is separately scoped.** Mainnet CIMP, custody, perpetuals, user-signed swaps, automated live execution and capital deployment are outside this release. Any later proposal needs its own permissions, venue and legal review, security assessment, and limits; a paper pass does not authorize live trading.
+
+### Initial acceptance targets
+
+Targets below are proposed for a small invited paper beta. Record measurements in staging and revise targets with the owner before promotion. They are not current production guarantees.
+
+| Measure | Proposed pass condition |
+| --- | --- |
+| Ledger integrity | Zero unbalanced journal transactions, duplicate fills or unexplained projection discrepancies in retry, concurrency, outage and reset scenarios. |
+| Traceability | 100% of test fills trace to a quote, observations, policy decision and balanced journal. |
+| API performance | At 20 active simulated members, p95 under 300 ms for cached portfolio reads and under 750 ms for valid paper submissions using a precomputed quote, excluding wallet interaction. Run for at least 30 minutes; publish latency, errors and DB headroom. |
+| Feed safety | Use the current 120-second cutoff as the initial ceiling, configurable per instrument. Tests must demonstrate old timestamps survive outages, rejected fills do not mutate balances, and unaffected instruments can still fill. |
+| Alerting | A sustained feed outage or halted worker triggers a test alert to the assigned operator within five minutes; reconciliation mismatch pauses writes and alerts on detection. |
+| Recovery | Rehearse recovery in an isolated environment to an approved target of at most 15 minutes of data loss and 60 minutes to restored service. Measure the actual restore point, duration and reconciliation result. |
+| Private beta | Desktop and mobile wallet test matrix, access/privacy checks, rollback drill, and seven days of monitored invited paper operation with no unresolved integrity or access incidents. |
+
+## Build order and cutover
+
+| Slice | Deliver | Exit evidence |
+| --- | --- | --- |
+| 0 · Release baseline | Inventory GitHub and Site differences; choose which changes to retain (including near-black UI); reconcile them into one reviewed source. Capture release manifest and feature flags. | Clean fingerprint and build from GitHub; compare release manifest and deployed artifact; wallet smoke on the intended domain. |
+| 1 · Market data | Add normalized instrument/observation contracts, provider diagnostics and scheduled ingestion in staging. | Fixture and failure injection for cbBTC/ETH timeouts, stale/future data, malformed response and recovery. Measure refresh and alert behavior. |
+| 2 · Paper core | Implement the PostgreSQL journal and order command path behind staging-only access. Keep existing UI contract via adapter. | Concurrent spends, repeat POSTs, after-commit timeout, quote expiry, pause/reset races, reversal and journal replay pass on PostgreSQL. |
+| 3 · Migration rehearsal | Dry-run export and restore against sanitized data. Map existing wallet accounts, balances, archived trades and idempotency receipts. | Prove amounts, counts, account isolation and outcome replays; report mapping exceptions and measured restore time. |
+| 4 · Controlled cutover | Pause old writes, take an approved snapshot, import and reconcile, route to one writer, require new sign-in, and run a signed-off smoke test. | Checksums, per-asset balances and counts agree; no dual writes; owner approves reopening. Invited users test on desktop and mobile. |
+| 5 · Paper strategies | Integrate the existing bot ideas through the common order path. | Replay reproduces decisions; scheduler restarts do not duplicate fills; limits and pauses behave the same as manual paper trading. |
+
+Historical trades may lack market provenance. Keep them as explicitly labeled legacy records; migrate opening balances through documented opening entries rather than inventing historical quotes. Preserve or explicitly quarantine unresolved legacy idempotency outcomes so pre-cutover retries cannot spend twice. Revoke prior sessions instead of copying secrets or hashes between systems.
+
+Before enabling writes on the new store, rollback can point back to the frozen old writer. After new writes occur, freeze and reconcile first. Roll back app code against the new store if compatible; moving the writer back requires a separately verified reverse transfer. Never reopen the old writer with stale balances. Retain a secure, time-limited source snapshot under the approved retention policy.
+
+## Related project references
+
+- [Current private beta checks and recovery runbook](LAUNCH-READINESS.md)
+- [Worker adapter and safeguards](../hosted/README.md)
+- [Python server and paper bots](../server/README.md)
+- [Deployment instructions for the optional Python stack](DEPLOY.md)
+- [CIMP Testnet Lab](CIMP-TESTNET.md)
+- [Previous architecture and lab implementation notes](https://github.com/mangpijasuan/cimphawng/blob/8052896e8f3b181435cfbd5ededdeb99e0046fd8/docs/ARCHITECTURE.md)
