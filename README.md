@@ -193,10 +193,11 @@ The **System** panel on the AI tab shows live numbers from the server, all real 
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app works today and the planned design:
-real DEX prices (starting on Base), analysis, wallet sign-in for the Zomi community, paper trading and,
-later, automated trading, all on a Hetzner server at cimphawng.com. It's non-custodial: members always
-keep and sign for their own coins.
+The private beta runs the Worker and D1 paper-trading API. The repository also contains an
+independent FastAPI and PostgreSQL implementation with a paper-bot runner. See the revised
+[architecture](docs/ARCHITECTURE.md) for the current boundaries, proposed market-data and
+paper-ledger design, measurable release gates, and migration order. See
+[launch readiness](docs/LAUNCH-READINESS.md) for the status of the private beta.
 
 ## Run it
 
