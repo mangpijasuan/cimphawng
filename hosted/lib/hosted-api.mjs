@@ -140,7 +140,7 @@ async function dispatch(request,db,{origin,now,fetcher,clock}){
  return json({trade,portfolio:await portfolio(db,address,prices,now)});
 }
 export async function handleApi(request,db,options={}){
- const start=Date.now(),requestId=crypto.randomUUID();const context={origin:SITE_ORIGIN,fetcher:fetch,clock:Date.now,...options};context.now=context.clock();let response;
+ const start=Date.now(),requestId=crypto.randomUUID();const requestOrigin=new URL(request.url).origin;const origin=requestOrigin==='https://cimphawng-lab-preview.mangpi-jasuan.chatgpt.site'?requestOrigin:SITE_ORIGIN;const context={origin,fetcher:fetch,clock:Date.now,...options};context.now=context.clock();let response;
  try{
   if(!db)fail(503,'Database is not configured.');
   const pathname=new URL(request.url).pathname;
