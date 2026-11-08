@@ -342,11 +342,31 @@
   .tb-passive-grid b{display:block;font-size:13px;color:#ecf4f7} .tb-passive-grid span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
   .tb-signal{border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0;background:#14212b}
   .tb-signal b{color:#ecf4f7} .tb-signal p{margin:4px 0 0;color:var(--dim);font-size:11px}
+  /* Market Sphere (demo snapshot) — scoped tb- classes only */
+  .tb-sphere{border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:16px;background:#0b141d}
+  .tb-sphere-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+  .tb-sphere-grid div{background:#14212b;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+  .tb-sphere-grid b{display:block;font-size:13px;color:#ecf4f7} .tb-sphere-grid span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .tb-sphere canvas{width:100%;height:340px;display:block;background:#070d12;border:1px solid var(--line);border-radius:8px;touch-action:manipulation}
+  .tb-sphere-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .tb-sphere-chips button{min-height:44px;padding:10px 14px;border-radius:9px;border:1px solid var(--line);background:#14212b;color:#ecf4f7;font-weight:600;cursor:pointer;flex:1 1 22%}
+  .tb-sphere-chips button.on{background:#214535;color:var(--green);border-color:#385e49}
+  .tb-donut{width:110px;height:110px;border-radius:50%;background:conic-gradient(#ff6b81 0 71.4%,#f5a524 71.4% 100%);display:flex;align-items:center;justify-content:center;flex:none}
+  .tb-donut b{background:#0b141d;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#ecf4f7;text-align:center}
+  .tb-hist-row{display:grid;grid-template-columns:88px 1fr 30px;gap:8px;align-items:center;margin:5px 0;font-size:11px;color:var(--dim)}
+  .tb-hist-row i{display:block;height:12px;border-radius:6px;background:#2b7a4b}
+  .tb-hist-row i.neg{background:#8a2f3d}
+  .tb-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+  .tb-sphere-flex{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .tb-sphere-flex>div{flex:1 1 220px;min-width:0}
   @media(max-width:760px){
     #tbots .tb-row{flex-direction:column;align-items:stretch}
     #tbots .tfs{display:flex;flex-wrap:wrap}
     #tbots .tfs button{min-height:44px;flex:1 1 auto}
     #tbots .tb-passive-grid{grid-template-columns:1fr}
+    #tbots .tb-sphere-grid{grid-template-columns:1fr}
+    #tbots .tb-sphere canvas{height:300px}
+    #tbots .tb-sphere-chips button{flex:1 1 30%}
     #tbots .tb-stats{grid-template-columns:1fr 1fr}
     #tbots .tb-stack{grid-template-columns:1fr !important}
     #tbots table{width:100%}
@@ -570,6 +590,45 @@
       <div class="tb-signal"><b>Grid · BUY · strength 70</b><p>All three coins low in their 30-day range — low grid band.</p></div>
       <div class="tb-signal"><b>DCA · BUY · strength 50</b><p>Schedule-based tranche, regardless of price.</p></div>
       <div class="muted" style="margin-top:8px">These signals exist, but they do not unlock passive trading until a strategy passes both proof gates.</div>
+    </div>
+    <div class="tb-sphere" id="tb-sphere">
+      <h3 style="font-size:12px;color:#ecf4f7;margin:0">Market Sphere (demo snapshot) — top 60 by market cap <em class="live">DEMO</em></h3>
+      <div class="muted" style="margin-top:6px">A static snapshot port of the Market Sphere room in the full Cimphawng Trading app. Snapshot from the CoinGecko top-100 ranking, as of <b style="color:#ecf4f7">Nov 8, 2026, 10:31 AM CST</b>; ranking quotes as of 10:29 AM CST and flagged <b style="color:#f5a524">STALE</b> in the full app. Demo snapshot only — no live feed, no live prices, no real orders. Node size = market cap, node colour = 24h move (green up, red down, amber = USD-pegged stablecoin). Arcs link coins whose 24h moves agree within 1.5 points; the spoke from the centre hub marks the coin held in the paper account. Tap a node (or a chip below) to see its snapshot details — it does not load the coin in the live app and does not trade.</div>
+      <div class="tb-sphere-grid">
+        <div><b>$99,640.15</b><span>Paper equity (full app)</span></div>
+        <div><b>-0.61%</b><span>Drawdown vs peak $100,252.73</span></div>
+        <div><b id="tb-sphere-breadth">—</b><span>24h breadth · top 60</span></div>
+        <div><b>XRP 76.297</b><span>Only holding · $88.12 · -11.79%</span></div>
+        <div><b>0 pass / 5 fail / 2 inconclusive</b><span>Walk-forward validations (7)</span></div>
+        <div><b>BLOCKED</b><span>Passive · 0 eligible strategies</span></div>
+      </div>
+      <canvas id="c-tb-sphere" height="340" aria-label="Market Sphere demo snapshot: top 60 coins by market cap on three rings by rank"></canvas>
+      <div class="tb-sphere-chips" id="tb-sphere-chips">
+        <button type="button" data-tb-sphere="BTC">BTC</button><button type="button" data-tb-sphere="ETH">ETH</button><button type="button" data-tb-sphere="USDT">USDT</button><button type="button" data-tb-sphere="BNB">BNB</button><button type="button" data-tb-sphere="XRP">XRP</button><button type="button" data-tb-sphere="USDC">USDC</button><button type="button" data-tb-sphere="SOL">SOL</button><button type="button" data-tb-sphere="TRX">TRX</button>
+      </div>
+      <div class="tb-signal" id="tb-sphere-focus"><b>FOCUS · BTC · RANK #1</b><p>$75,987 · +0.36% in 24h · market cap $1,528.1B · snapshot Nov 8, 2026, 10:29 AM CST (STALE). Tap any node or chip for another coin.</p></div>
+      <div class="tb-sphere-flex" style="margin-top:14px">
+        <div>
+          <h4 style="font-size:12px;color:#ecf4f7;margin:0 0 4px">24h-move distribution · top 60</h4>
+          <div id="tb-sphere-hist"></div>
+          <div class="muted" style="margin-top:6px">Most of the top 60 were down on the snapshot day; the biggest faller in the top 60 was BCH at -5.01%, the biggest riser PEPE at +3.59%.</div>
+        </div>
+        <div>
+          <h4 style="font-size:12px;color:#ecf4f7;margin:0 0 4px">Walk-forward verdicts · 0 pass</h4>
+          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+            <div class="tb-donut"><b>0 PASS<br>7 runs</b></div>
+            <div style="flex:1 1 160px">
+              <div class="muted"><span class="tb-dot" style="background:#ff6b81"></span>FAIL · 5 — SOL momentum, SOL mean reversion, SOL grid, SOL DCA, BTC momentum</div>
+              <div class="muted" style="margin-top:4px"><span class="tb-dot" style="background:#f5a524"></span>INCONCLUSIVE · 2 — ETH trend-filtered, SOL trend-filtered</div>
+              <div class="muted" style="margin-top:4px"><span class="tb-dot" style="background:#39d98a"></span>PASS · 0 — nothing validated yet</div>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:8px">Out-of-sample returns: SOL momentum -9.79% (in-sample +17.31%), SOL mean reversion -11.41% (+10.77%), SOL grid -8.73% (0.00%), SOL DCA -14.11% (+13.92%), BTC momentum -0.74% (-6.97%). Inconclusive: ETH trend-filtered 0.00% with 0 out-of-sample trades, SOL trend-filtered -0.97% with 2 out-of-sample trades. No strategy passes, so passive stays BLOCKED.</div>
+        </div>
+      </div>
+      <h4 style="font-size:12px;color:#ecf4f7;margin:14px 0 4px">Signal strength · snapshot Nov 8, 00:31 UTC run</h4>
+      <div class="muted"><span class="tb-dot" style="background:#ff6b81"></span>Momentum · SELL · 73 &nbsp; <span class="tb-dot" style="background:#39d98a"></span>Mean reversion · BUY · 70 &nbsp; <span class="tb-dot" style="background:#39d98a"></span>Grid · BUY · 70 &nbsp; <span class="tb-dot" style="background:#39d98a"></span>DCA · BUY · 50 &nbsp; <span class="tb-dot" style="background:#8b90a8"></span>Trend-filtered · HOLD · 20</div>
+      <div class="muted" style="margin-top:6px">Same pattern across BTC, SOL and XRP on that run; ETH mean reversion and grid were 55 instead of 70. A signal — even a strong one — does not pass walk-forward validation, does not complete a paper proof, and does not make a strategy eligible for passive mode.</div>
     </div>
   </section>
 
@@ -2682,6 +2741,115 @@
   window.addEventListener('resize',drawChart);
   renderBots();renderFeed();updateEst();setPair('BTC');
 })();
+</script>
+
+<script>
+/* Market Sphere (demo snapshot) — static data only, no live feed, no trades.
+   Snapshot: CoinGecko top-100 ranking, as of Nov 8 2026 10:31 AM CST;
+   quotes as of 10:29 AM CST, flagged STALE in the full app.
+   [symbol, rank, price USD, 24h change %, market cap $B, is USD-pegged stablecoin] */
+(function(){
+  var DATA=[
+    ["BTC",1,75987,0.36,1528.06,0],["ETH",2,2238.4,0.13,273.53,0],["USDT",3,0.998953,-0.03,176.84,1],
+    ["BNB",4,697.28,0.53,91.70,0],["XRP",5,1.16,-0.15,73.53,0],["USDC",6,0.999443,-0.03,70.39,1],
+    ["SOL",7,89.5,-0.03,52.90,0],["TRX",8,0.320179,0.18,30.43,0],["FIGR_HELOC",9,1.056,1.49,27.85,0],
+    ["ZEC",10,1263.42,0.14,21.52,0],["HYPE",11,77.34,-0.13,18.51,0],["XMR",12,607.59,-0.23,11.44,0],
+    ["DOGE",13,0.071378,-0.41,11.18,0],["USDS",14,1,-0.02,8.83,1],["WBT",15,72.93,0.21,8.65,0],
+    ["LEO",16,9.32,-0.12,8.57,0],["LINK",17,10.72,-1.32,8.22,0],["ADA",18,0.18061,-0.67,6.79,0],
+    ["XLM",19,0.151064,-0.61,5.34,0],["USDE",20,0.998765,0,4.93,1],["BCH",21,244.38,-5.01,4.92,0],
+    ["NEAR",22,3.7,1.05,4.85,0],["DAI",23,0.999938,-0.01,4.49,1],["UNI",24,7.01,-0.31,4.26,0],
+    ["LTC",25,51.76,-0.39,4.03,0],["RAIN",26,0.00538709,-3.53,3.85,0],["CC",27,0.093003,-2.25,3.72,0],
+    ["AVAX",28,8.24,0.46,3.67,0],["SUI",29,0.84956,-1.08,3.52,0],["USD1",30,0.997631,-0.07,3.43,1],
+    ["XAUT",31,4048.32,-0.21,3.28,0],["GRAM",32,1.06,-2.32,3.03,0],["HBAR",33,0.066764,-0.89,2.96,0],
+    ["QNT",34,199.08,0.77,2.90,0],["PYUSD",35,1,-0.02,2.79,1],["USDG",36,0.999947,-0.01,2.71,1],
+    ["RLUSD",37,1,0,2.69,1],["TAO",38,225.21,1.29,2.64,0],["SHIB",39,0.00000446,-0.25,2.63,0],
+    ["CRO",40,0.04833492,-0.63,2.45,0],["USDY",41,1.15,-0.41,2.38,0],["OKB",42,102.62,-0.56,2.16,0],
+    ["PEPE",43,0.00000504,3.59,2.12,0],["USYC",44,1.14,0,2.10,0],["ENA",45,0.153993,-2.58,2.08,0],
+    ["AAVE",46,129.57,-2.26,2.00,0],["EURSAFO",47,1.13,0.03,1.92,0],["M",48,0.800151,-2.97,1.84,0],
+    ["USDF",49,0.995547,0.10,1.82,1],["PAXG",50,4049.46,-0.27,1.81,0],["BUIDL",51,1,0,1.78,0],
+    ["ONDO",52,0.362034,-0.28,1.76,0],["ASTER",53,0.678816,0.13,1.75,0],["BTW",54,1.13,-0.06,1.71,0],
+    ["PUMP",55,0.00370396,2.21,1.70,0],["U",56,0.999421,0,1.61,0],["DOT",57,0.891737,-0.67,1.53,0],
+    ["USDD",58,0.998883,-0.12,1.51,1],["SKY",59,0.064175,0.11,1.50,0],["MNT",60,0.451467,-1.05,1.49,0]
+  ];
+  var cv=document.getElementById('c-tb-sphere');if(!cv)return;
+  var ctx=cv.getContext('2d');if(!ctx)return;
+  var focus=document.getElementById('tb-sphere-focus');
+  var maxCap=DATA[0][4];
+  function fmtPrice(p){return p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:2}):p>=1?p.toFixed(2):p.toFixed(6);}
+  function colour(d){if(d[5])return '#f5a524';if(d[3]>0)return '#39d98a';if(d[3]<0)return '#ff6b81';return '#8b90a8';}
+  function ringOf(rank){return rank<=10?0:rank<=30?1:2;}
+  function layout(){
+    var w=cv.clientWidth||cv.parentNode.clientWidth||600,h=340;
+    var dpr=window.devicePixelRatio||1;
+    cv.width=w*dpr;cv.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    var cx=w/2,cy=h/2,R=Math.min(w,h)/2-14;
+    var rings=[0.30,0.56,0.84],counts=[0,0,0],pos=[];
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='rgba(139,144,168,.25)';ctx.lineWidth=1;
+    rings.forEach(function(r){ctx.beginPath();ctx.arc(cx,cy,r*R,0,Math.PI*2);ctx.stroke();});
+    DATA.forEach(function(d,i){
+      var ring=ringOf(d[1]),n=counts[ring]++;var total=ring===0?10:ring===1?20:30;
+      var ang=-Math.PI/2+n*(Math.PI*2/total)+ring*0.35;
+      var x=cx+Math.cos(ang)*rings[ring]*R,y=cy+Math.sin(ang)*rings[ring]*R;
+      var r=3+9*Math.sqrt(d[4]/maxCap);
+      pos.push({d:d,x:x,y:y,r:r});
+    });
+    ctx.lineWidth=1;
+    for(var a=0;a<pos.length;a++){for(var b=a+1;b<pos.length;b++){
+      if(ringOf(pos[a].d[1])!==ringOf(pos[b].d[1]))continue;
+      if(Math.abs(pos[a].d[3]-pos[b].d[3])>1.5)continue;
+      var dx=pos[a].x-pos[b].x,dy=pos[a].y-pos[b].y;
+      if(Math.sqrt(dx*dx+dy*dy)>R*0.75)continue;
+      ctx.strokeStyle='rgba(127,184,255,.18)';ctx.beginPath();ctx.moveTo(pos[a].x,pos[a].y);ctx.lineTo(pos[b].x,pos[b].y);ctx.stroke();
+    }}
+    var held=pos.filter(function(p){return p.d[0]==='XRP';})[0];
+    if(held){ctx.strokeStyle='rgba(127,184,255,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(held.x,held.y);ctx.stroke();}
+    ctx.fillStyle='#0d2028';ctx.strokeStyle='#7fb8ff';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(cx,cy,30,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ecf4f7';ctx.font='bold 9px system-ui';ctx.textAlign='center';
+    ctx.fillText('PAPER',cx,cy-4);ctx.fillText('EQUITY',cx,cy+7);ctx.fillText('$99,640',cx,cy+18);
+    pos.forEach(function(p){
+      ctx.fillStyle=colour(p.d);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+      if(p.d[1]<=10){ctx.fillStyle='#ecf4f7';ctx.font='bold 9px system-ui';ctx.fillText(p.d[0],p.x,p.y-p.r-4);}
+      if(p.d[0]==='XRP'){ctx.strokeStyle='#7fb8ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,p.r+3,0,Math.PI*2);ctx.stroke();}
+    });
+    cv._tbSpherePos=pos;
+    return pos;
+  }
+  function show(d){
+    if(!focus)return;
+    var sign=d[3]>0?'+':'';var peg=d[5]?' · USD-PEGGED stablecoin':'';
+    var held=d[0]==='XRP'?' · HELD in the paper account (76.297 XRP, $88.12, -11.79%)':'';
+    focus.innerHTML='<b>FOCUS · '+d[0]+' · RANK #'+d[1]+'</b><p>$'+fmtPrice(d[2])+' · '+sign+d[3].toFixed(2)+'% in 24h · market cap $'+d[4].toFixed(2)+'B'+peg+held+' · snapshot Nov 8, 2026, 10:29 AM CST (STALE). Demo only — this does not load the coin in the live app or place a trade.</p>';
+    document.querySelectorAll('#tb-sphere-chips button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tb-sphere')===d[0]);});
+  }
+  function bySymbol(sym){for(var i=0;i<DATA.length;i++)if(DATA[i][0]===sym)return DATA[i];return DATA[0];}
+  cv.addEventListener('click',function(e){
+    var rect=cv.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,best=null,bd=1e9;
+    (cv._tbSpherePos||[]).forEach(function(p){var dd=Math.hypot(p.x-x,p.y-y);if(dd<bd){bd=dd;best=p;}});
+    if(best&&bd<Math.max(18,best.r+8))show(best.d);
+  });
+  document.getElementById('tb-sphere-chips').addEventListener('click',function(e){
+    var b=e.target.closest('[data-tb-sphere]');if(b)show(bySymbol(b.getAttribute('data-tb-sphere')));
+  });
+  var up=0,flat=0,down=0;
+  DATA.forEach(function(d){if(d[3]>0)up++;else if(d[3]<0)down++;else flat++;});
+  var br=document.getElementById('tb-sphere-breadth');if(br)br.textContent=up+' up / '+flat+' flat / '+down+' down';
+  var buckets=[['<-3%',-99,-3],['-3 to -2%',-3,-2],['-2 to -1%',-2,-1],['-1 to 0%',-1,0],['0 to +1%',0,1],['+1 to +2%',1,2],['>+2%',2,99]];
+  var hist=document.getElementById('tb-sphere-hist');
+  if(hist){
+    var max=0,rows=buckets.map(function(bk){
+      var c=0;DATA.forEach(function(d){if((bk[1]===-99&&d[3]<=-3)||(bk[2]===99&&d[3]>2)||(d[3]>bk[1]&&d[3]<=bk[2]))c++;});
+      if(c>max)max=c;return {label:bk[0],count:c,neg:bk[2]<=0};
+    });
+    hist.innerHTML=rows.map(function(r){
+      return '<div class="tb-hist-row"><span>'+r.label+'</span><i class="'+(r.neg?'neg':'')+'" style="width:'+(max?Math.round(r.count/max*100):0)+'%"></i><b style="color:#ecf4f7">'+r.count+'</b></div>';
+    }).join('');
+  }
+  layout();
+  window.addEventListener('resize',layout);
+})();
+
 </script>
 
 </body>
