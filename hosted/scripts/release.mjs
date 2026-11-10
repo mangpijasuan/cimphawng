@@ -8,7 +8,7 @@ export const repoRoot=fs.existsSync(path.join(localRoot,'worker.mjs'))
  ? path.resolve(localRoot,'..') : null;
 
 export const assets=[
- 'account.html','account.js','beta.css','desk.html','docs/CIMP-TESTNET.md',
+ 'account.html','account.js','assets/cimphawng-logo.jpg','beta.css','desk.html','docs/CIMP-TESTNET.md',
  'docs/CIMP-UTILITY-PROPOSAL.md','guide.html','index.html','setup.html','status.html',
  'status.js','token/app.js','token/index.html','token/web/CimphawngTestToken.json',
  'token/web/ethers-LICENSE.md','token/web/ethers.umd.min.js','token/web/standard-input.json','ui.css'
