@@ -1,10 +1,10 @@
 name: Hosted paper API tests
 on:
   pull_request:
-    paths: ['hosted/**','index.html','ui.css','desk.html','setup.html','docs/CIMP-*.md','token/**','guide.html','account*','status*','beta.css','.github/workflows/hosted-api-tests.yml']
+    paths: ['hosted/**','index.html','assets/**','ui.css','desk.html','setup.html','docs/CIMP-*.md','token/**','guide.html','account*','status*','beta.css','.github/workflows/hosted-api-tests.yml']
   push:
     branches: [main,'claude/hobby-project-app-webapp-nmtkai']
-    paths: ['hosted/**','index.html','ui.css','desk.html','setup.html','docs/CIMP-*.md','token/**','guide.html','account*','status*','beta.css','.github/workflows/hosted-api-tests.yml']
+    paths: ['hosted/**','index.html','assets/**','ui.css','desk.html','setup.html','docs/CIMP-*.md','token/**','guide.html','account*','status*','beta.css','.github/workflows/hosted-api-tests.yml']
 permissions:
   contents: read
 concurrency:

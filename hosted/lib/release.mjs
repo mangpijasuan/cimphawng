@@ -1,1 +1,1 @@
-export default {"version":"0.2.0-beta.1","fingerprint":"2e2a9163a664748fedae3c19528c3044209e8ed6a88e907bee35d1d89ffa1aae","source_base":"8fbadbcf73c7024ad4449cec69b542bf093745ef","channel":"private-beta"};
+export default {"version":"0.2.0-beta.1","fingerprint":"6fd7876aedf07e91c6d9cbb204f0379294d771e8f0be9a7a8c6c21fbf2bc5c53","source_base":"8fbadbcf73c7024ad4449cec69b542bf093745ef","channel":"private-beta"};
