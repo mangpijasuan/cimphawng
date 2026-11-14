@@ -74,6 +74,19 @@ broker account needs a new isolated pilot, not reuse of its records.
 
 ### Dedicated paper account smoke test (pending)
 
+Before enabling the private Worker, put the same bindings in a git-ignored
+`hosted/.dev.vars` on your local machine and run this read-only check from the
+repo root (Node 24 recommended):
+
+```sh
+node --env-file=hosted/.dev.vars hosted/scripts/alpaca-paper-preflight.mjs
+```
+
+The check verifies that the key and secret belong to the expected Alpaca
+paper account and that the account is eligible for orders. It never submits
+an order or prints the account response. Once it passes, use the isolated
+Worker and proceed with the signed-in test:
+
 1. Sign in with the configured wallet and open Guided Trading. A signed-out or
    different wallet must not see the pilot panel.
 2. During a regular session, choose one share and enter an independently

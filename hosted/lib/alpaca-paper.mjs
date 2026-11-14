@@ -1,5 +1,5 @@
 // Private operator pilot. This adapter has no live broker URL or order retry path.
-const BASE = 'https://paper-api.alpaca.markets/v2';
+export const PAPER_API_BASE = 'https://paper-api.alpaca.markets/v2';
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const SYMBOLS = ['SPY', 'QQQ'];
 const MAX_CENTS = 100_000;
@@ -24,7 +24,7 @@ export async function paperPilot({request, path, db, config, clock, fetcher, rea
   async function call(method, suffix, data) {
     let response;
     try {
-      response = await fetcher(BASE + suffix, {
+      response = await fetcher(PAPER_API_BASE + suffix, {
         method, redirect: 'error', signal: AbortSignal.timeout(5000),
         headers: {'APCA-API-KEY-ID': config.key, 'APCA-API-SECRET-KEY': config.secret,
           Accept: 'application/json', ...(data ? {'Content-Type': 'application/json'} : {})},
