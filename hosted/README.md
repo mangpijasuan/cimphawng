@@ -105,6 +105,57 @@ alone does not prove no order exists. There is no in-product override.
 Disabling the pilot does not cancel working orders; check and cancel them in
 Alpaca Paper as needed.
 
+### Recovering an unresolved order
+
+An unresolved order keeps its row in stage `sending`. A unique index allows only
+one such row per broker account, so **every new review and submission is refused
+until the row is closed**. Closing it is a manual operator step, and it is only
+bookkeeping: it never contacts Alpaca. Do it only after you have confirmed the
+true state with the broker.
+
+1. **Find the row.** The `id` is the order's Alpaca `client_order_id`.
+
+   ```sh
+   npx wrangler d1 execute cimphawng-paper --remote --command \
+     "SELECT id, symbol, limit_cents / 100.0 AS limit_usd, datetime(created_at / 1000, 'unixepoch') AS created_utc, stage FROM alpaca_pilot_orders WHERE stage = 'sending'"
+   ```
+
+2. **Ask Alpaca, in the paper account, not the app.** Do not rely on one lookup:
+   - Look up that `client_order_id` (`GET /v2/orders:by_client_order_id`), or
+     search the Alpaca Paper dashboard for it.
+   - List all orders (`status=all`) for the symbol around `created_utc`, and
+     check positions and recent fills for the symbol. A 404 on the lookup alone
+     does not prove that nothing was placed.
+3. **Decide the outcome:**
+
+   | What Alpaca shows | What to do |
+   | --- | --- |
+   | The order is still working (new, accepted, partially filled, pending cancel) | Cancel it in Alpaca Paper (or use **Request cancellation** in the app), wait until it is final, then continue below. |
+   | The order is final (filled, canceled, expired, rejected) | Record that exact status and the filled quantity from Alpaca. |
+   | No order and no fill exist anywhere in the account, and the original request cannot still be in flight | Record it as `canceled` with `0` filled. This is a local label meaning "never reached the broker". |
+   | You cannot tell | Leave the row alone. Keep the pilot disabled until you can. |
+
+4. **Close the row.** Replace the id, account, status and filled quantity with
+   the values you confirmed. `final_status` must be one of `filled`, `canceled`,
+   `expired`, `rejected`, and `final_filled` is the quantity as text (`'0'` to
+   `'1'`). The `stage = 'sending'` condition keeps this from touching any other
+   row, and the command should report one changed row.
+
+   ```sh
+   npx wrangler d1 execute cimphawng-paper --remote --command \
+     "UPDATE alpaca_pilot_orders SET stage = 'closed', final_status = 'canceled', final_filled = '0' WHERE id = '<client_order_id>' AND broker_account = '<ALPACA_PAPER_ACCOUNT_ID>' AND stage = 'sending'"
+   ```
+
+5. **Verify.** Reload Guided Trading, confirm the order shows the status you
+   recorded, and confirm a new review is accepted again. Write down what
+   happened: order id, what Alpaca showed, who closed it and when. Do not include
+   credentials or account details.
+
+Never delete the row or change its id. Never mark an order `canceled` while it
+could still be working at Alpaca, because the app would then allow a second
+order next to an unseen first one. If you are unsure, reconciling takes priority
+over unblocking the pilot.
+
 ## Storage and safeguards
 
 Sign-in messages use the selected Ethereum, Base, Base Sepolia or Ethereum Sepolia wallet network.
