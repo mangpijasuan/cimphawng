@@ -11,6 +11,8 @@ Reviewed GitHub `577d0f57a8420827bee3e34120c489ee7ddd3ba0`. The private Site use
 
 ## Product design
 
+[Guided Trading](GUIDED-TRADING.md) is the default beginner experience: explain the top qualified setup, preview the risk, and review a paper order. Terminal remains available for advanced users. Both use the same eligibility rules and execution gateway.
+
 | Workspace | Main interaction |
 | --- | --- |
 | Command Center | Feed health and age, market session, connected account, positions, risk usage and open orders. Pin Paper/Live and Manual/Copilot/Automated in the header. |
