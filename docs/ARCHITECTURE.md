@@ -4,7 +4,7 @@
 
 Cimphawng should become an auditable paper-trading terminal for the Zomi community. The next release should make each fill explainable, keep trading safe during a feed outage, and prove that an operator can recover the system. Preserve the near-black navy terminal, Zomi and English, the browser demo, and the separate CIMP Testnet Lab.
 
-The [Cimphawng Trade architecture](TRADING-ARCHITECTURE.md) extends this paper foundation to streaming signals, manual and Copilot orders, opt-in automation, Alpaca and a separate mainnet CIMP track.
+The [Cimphawng Trade architecture](TRADING-ARCHITECTURE.md) states the product requirements for streaming signals, manual and Copilot orders, opt-in automation, Alpaca and a separate mainnet CIMP track. Since November 14 those are built on the Olbos Trade platform, not on this paper foundation (see the [addendum](BACKEND-DECISION.md#addendum-november-14-2026-trade-is-built-on-olbos-trade)).
 
 ## What runs today
 
@@ -121,7 +121,7 @@ Before enabling writes on the new store, rollback can point back to the frozen o
 ## Related project references
 
 - [Current private beta checks and recovery runbook](LAUNCH-READINESS.md)
-- [Backend decision: one writer and roadmap order (proposed)](BACKEND-DECISION.md)
+- [Backend decision: one writer and roadmap order (accepted, with a November 14 addendum)](BACKEND-DECISION.md)
 - [Worker adapter and safeguards](../hosted/README.md)
 - [Python server and paper bots](../server/README.md)
 - [Deployment instructions for the optional Python stack](DEPLOY.md)

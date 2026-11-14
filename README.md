@@ -195,7 +195,7 @@ The **System** panel on the AI tab shows live numbers from the server, all real 
 
 ## Architecture
 
-See the proposed [Cimphawng Trade architecture](docs/TRADING-ARCHITECTURE.md) for the target domain, Alpaca integration, real-time signals, execution modes, and separate CIMP mainnet track.
+See the [Cimphawng Trade architecture](docs/TRADING-ARCHITECTURE.md) for the product requirements: target domain, Alpaca integration, real-time signals, execution modes, and the separate CIMP mainnet track. Cimphawng Trade is being built as a brand on the Olbos Trade platform rather than on this repository's server; see the [backend decision addendum](docs/BACKEND-DECISION.md#addendum-november-14-2026-trade-is-built-on-olbos-trade).
 
 The private beta runs the Worker and D1 paper-trading API. The repository also contains an
 independent FastAPI and PostgreSQL implementation with a paper-bot runner. See the revised
