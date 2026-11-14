@@ -6,6 +6,17 @@ Cimphawng does the scanning, testing and order preparation. A beginner can use t
 
 Use the existing red-and-navy design and English/Zomi language switch. Make **Guided** the first screen for new users and retain **Terminal** as the advanced view. Both read the same signal and order records. Show **Paper · No real money** beside the account name and again on the confirmation button. A change of account or mode clears any pending approval.
 
+## Practice slice in this branch
+
+Open `/guided.html` from the Terminal or run `node hosted/scripts/serve-preview.mjs` and visit
+`http://127.0.0.1:8765/guided.html`. The sample ETF, prices and fills are fictional.
+The simulator persists the ticket and order state in browser storage. **Advance simulator** steps the order through
+fills or confirms a cancellation; requesting cancellation alone keeps the unfilled cash reserved.
+Order writes use Web Locks to serialize changes across tabs in a secure browser context.
+Run `node --test hosted/tests/guided-paper.test.mjs` to exercise the practice broker.
+
+The fictional example always stays in the browser. A separate [owner-only Alpaca paper pilot](../hosted/README.md#alpaca-paper-pilot) can be enabled on the standalone Worker for manual ETF limit orders. The pilot is off by default; it still needs a dedicated paper-account smoke test. Neither flow displays validated signals. The offline ML prototype remains separate.
+
 ## The beginner journey
 
 | Screen | What the user sees | Main action |

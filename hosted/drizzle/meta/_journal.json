@@ -15,6 +15,13 @@
       "when": 1792432495421,
       "tag": "0001_panoramic_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794617396000,
+      "tag": "0002_alpaca_pilot",
+      "breakpoints": true
     }
   ]
 }

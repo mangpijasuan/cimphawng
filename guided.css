@@ -1,0 +1,21 @@
+main{max-width:1080px;margin-top:32px}
+header{margin:34px 0 16px}
+h1{margin:12px 0}
+h2{margin:6px 0 12px;line-height:1.25}
+.guided-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.guided-grid section{margin:0}
+.pill,.eyebrow{color:var(--brand-blue);font-size:.82rem;font-weight:700;letter-spacing:.055em}
+.pill{display:inline-block;border:1px solid #3b5b83;border-radius:20px;padding:4px 12px}
+.note{font-size:.9rem}
+.primary{color:#091827;background:var(--brand-blue);font-weight:700}
+.primary:not(:disabled):hover{background:#c7e0ff}
+dt{font-weight:650}
+dd{margin:0 0 10px;color:var(--brand-muted)}
+.order-row{border-top:1px solid var(--brand-edge);padding:14px 0}
+.order-row p{margin:4px 0 12px}
+.order-row button{margin:0 8px 8px 0}
+[hidden]{display:none!important}
+@media(max-width:690px){.guided-grid{grid-template-columns:1fr}main{padding:0 18px}header{margin-top:22px}}
+#pilot-form{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+#pilot-form select,#pilot-price{background:var(--brand-raised);color:var(--brand-ink);border:1px solid var(--brand-edge);border-radius:8px;font:inherit;padding:8px}
+#pilot-price{width:8rem}

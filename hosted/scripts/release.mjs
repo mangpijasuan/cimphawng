@@ -9,14 +9,14 @@ export const repoRoot=fs.existsSync(path.join(localRoot,'worker.mjs'))
 
 export const assets=[
  'account.html','account.js','assets/cimphawng-logo.jpg','beta.css','brand.css','desk.html','docs/CIMP-TESTNET.md',
- 'docs/CIMP-UTILITY-PROPOSAL.md','guide.html','index.html','setup.html','status.html',
+ 'docs/CIMP-UTILITY-PROPOSAL.md','guide.html','guided.html','guided.css','guided.mjs','guided-alpaca.mjs','guided-paper.mjs','index.html','setup.html','status.html',
  'status.js','token/app.js','token/index.html','token/web/CimphawngTestToken.json',
  'token/web/ethers-LICENSE.md','token/web/ethers.umd.min.js','token/web/standard-input.json','ui.css'
 ];
 
 export function releaseInputs(root,repo){
  const backend=repo?'hosted/':'';
- const files=['lib/hosted-api.mjs','lib/ethers-server.mjs','db/schema.ts','scripts/release.mjs'];
+ const files=['lib/hosted-api.mjs','lib/alpaca-paper.mjs','lib/ethers-server.mjs','db/schema.ts','scripts/release.mjs'];
  const migrations=path.join(root,backend,'drizzle');
  for(const name of fs.readdirSync(migrations).filter(n=>n.endsWith('.sql')).sort())files.push('drizzle/'+name);
  for(const name of fs.readdirSync(path.join(migrations,'meta')).filter(n=>n.endsWith('.json')).sort())files.push('drizzle/meta/'+name);
