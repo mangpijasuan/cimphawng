@@ -195,6 +195,8 @@ The **System** panel on the AI tab shows live numbers from the server, all real 
 
 ## Architecture
 
+See the proposed [Cimphawng Trade architecture](docs/TRADING-ARCHITECTURE.md) for the target domain, Alpaca integration, real-time signals, execution modes, and separate CIMP mainnet track.
+
 The private beta runs the Worker and D1 paper-trading API. The repository also contains an
 independent FastAPI and PostgreSQL implementation with a paper-bot runner. See the revised
 [architecture](docs/ARCHITECTURE.md) for the current boundaries, proposed market-data and

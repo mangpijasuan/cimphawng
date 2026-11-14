@@ -4,6 +4,8 @@
 
 Cimphawng should become an auditable paper-trading terminal for the Zomi community. The next release should make each fill explainable, keep trading safe during a feed outage, and prove that an operator can recover the system. Preserve the near-black navy terminal, Zomi and English, the browser demo, and the separate CIMP Testnet Lab.
 
+The [Cimphawng Trade architecture](TRADING-ARCHITECTURE.md) extends this paper foundation to streaming signals, manual and Copilot orders, opt-in automation, Alpaca and a separate mainnet CIMP track.
+
 ## What runs today
 
 | Surface | Current implementation | Boundary |
