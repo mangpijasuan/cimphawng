@@ -3,7 +3,7 @@ on:
   pull_request:
     paths: ['research/**', '.github/workflows/ml-research.yml']
   push:
-    branches: [main, 'claude/hobby-project-app-webapp-nmtkai']
+    branches: ['claude/hobby-project-app-webapp-nmtkai']
     paths: ['research/**', '.github/workflows/ml-research.yml']
 permissions:
   contents: read
