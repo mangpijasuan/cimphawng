@@ -38,6 +38,8 @@ The order preview distinguishes an **invalidation level** from a **broker-confir
 4. **Rank only eligible candidates.** For the initial single strategy and common horizon, use a deterministic ordering: strength of the trigger relative to its approved threshold, then lower estimated execution cost, then fresher valid data, then a stable ID. Store ranking inputs and rule version. Avoid mixing incomparable stocks, options and crypto scores. Label the lead card **“Top qualified setup in this watchlist”** and publish the reason it ranked first. This rank is not a win probability or a forecast of returns.
 5. **Make no trade a normal result.** Show actionable reason codes such as market closed, feed delayed, spread too wide, entry no longer valid, or no validated setup. Expire drafts immediately on invalidation; do not fall back to a lower-quality signal to meet a daily quota.
 
+The [ML signal prototype](ML-SIGNALS.md) learns a second ranking for eligible stock/ETF setups in offline shadow mode. The rules-only ranking remains the default until the model passes a sealed holdout and forward paper comparison.
+
 Each card references immutable observations, a strategy version, a ranking policy version and a benchmark report. Copilot explains those facts in English or Zomi and prepares typed draft fields. It cannot fabricate missing values, rank trades itself, alter the strategy, choose a real-money budget, arm automation, or submit an order.
 
 ## Execution controls
