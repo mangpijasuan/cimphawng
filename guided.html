@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guided Trading · Cimphawng</title>
+  <link rel="icon" href="./assets/cimphawng-logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="./brand.css">
+  <link rel="stylesheet" href="./beta.css">
+  <link rel="stylesheet" href="./guided.css">
+</head>
+<body>
+<main>
+  <nav class="brand-rule" aria-label="Main">
+    <a class="brand-link" href="./index.html"><img class="brand-mark" src="./assets/cimphawng-logo.jpg" width="34" height="34" alt="">Cimphawng</a>
+    <a href="./index.html">Terminal</a>
+  </nav>
+  <header>
+    <p class="pill">Paper practice · No real money</p>
+    <h1>Guided Trading</h1>
+    <p>Learn to review and track a trade. No broker connection is needed.</p>
+  </header>
+  <div class="guided-grid">
+    <section aria-labelledby="setup-title">
+      <p class="eyebrow">01 / Example setup</p>
+      <h2 id="setup-title">Price breaks above its recent range</h2>
+      <p>This fictional ETF is for practice. A breakout can reverse, and a limit order may never fill.</p>
+      <dl>
+        <dt>What the rule saw</dt><dd>Price closed above its recent range and trading activity increased.</dd>
+        <dt>When the idea no longer applies</dt><dd>Price falls below $48. This is an example exit level; no exit is placed.</dd>
+      </dl>
+      <p class="note">No validated live setups are shown in this practice view.</p>
+    </section>
+    <section aria-labelledby="review-title">
+      <p class="eyebrow">02 / Review</p>
+      <h2 id="review-title">Preview your paper order</h2>
+      <p>Practice buying power: <strong id="cash">—</strong></p>
+      <form id="ticket-form">
+        <label for="shares">Whole shares (1–10)</label>
+        <input id="shares" name="shares" type="number" inputmode="numeric" min="1" max="10" step="1" value="2" required>
+        <button class="primary" type="submit">Preview order</button>
+      </form>
+      <div id="review" hidden>
+        <dl id="details"></dl>
+        <p class="note">Illustrative fills and $0 fees. A price gap can increase losses. A fully funded purchase can lose its entire cost.</p>
+        <button id="submit" class="primary" type="button">Submit paper order</button>
+      </div>
+      <p id="feedback" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <section aria-labelledby="orders-title">
+    <p class="eyebrow">03 / Track</p>
+    <h2 id="orders-title">Practice orders</h2>
+    <p>Advance the simulator to see a fill or a cancellation confirmation. Your practice history stays in this browser.</p>
+    <div id="orders" aria-live="polite"><p>No practice orders yet.</p></div>
+  </section>
+  <noscript><p>Enable JavaScript to use the practice order workflow.</p></noscript>
+</main>
+<script type="module" src="./guided.mjs"></script>
+</body>
+</html>
