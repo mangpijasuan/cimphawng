@@ -121,6 +121,7 @@ Before enabling writes on the new store, rollback can point back to the frozen o
 ## Related project references
 
 - [Current private beta checks and recovery runbook](LAUNCH-READINESS.md)
+- [Backend decision: one writer and roadmap order (proposed)](BACKEND-DECISION.md)
 - [Worker adapter and safeguards](../hosted/README.md)
 - [Python server and paper bots](../server/README.md)
 - [Deployment instructions for the optional Python stack](DEPLOY.md)
