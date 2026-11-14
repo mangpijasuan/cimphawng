@@ -1,4 +1,5 @@
 import os
+import uuid
 from decimal import Decimal
 
 import httpx
@@ -37,9 +38,25 @@ async def app(tmp_path):
     await a.state.engine.dispose()
 
 
+class Client(httpx.AsyncClient):
+    """Adds a fresh Idempotency-Key to every swap and reset that doesn't carry one, as the web app does."""
+
+    async def request(self, method, url, **kw):
+        if method == "POST" and str(url).rstrip("/").endswith(("/paper/swap", "/paper/reset")):
+            headers = dict(kw.get("headers") or {})
+            if not any(k.lower() == "idempotency-key" for k in headers):  # an explicitly empty one is sent as is
+                headers["Idempotency-Key"] = uuid.uuid4().hex
+            kw["headers"] = headers
+        return await super().request(method, url, **kw)
+
+
+def make_client(app) -> Client:
+    return Client(transport=httpx.ASGITransport(app=app), base_url="http://test")
+
+
 @pytest.fixture
 async def client(app):
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+    async with make_client(app) as c:
         yield c
 
 

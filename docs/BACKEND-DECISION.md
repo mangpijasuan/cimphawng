@@ -1,6 +1,6 @@
 # Backend decision: one writer, one roadmap order
 
-**Status: Proposed · November 13, 2026 · Needs an owner decision.** Nothing here changes code or deployments.
+**Status: Accepted · November 14, 2026.** The owner chose option B (FastAPI and PostgreSQL as the single long-term backend). Proposed November 13. The port checklist below is in progress. Nothing here deploys anything.
 
 ## Why this needs deciding
 
@@ -20,14 +20,14 @@ Verified by reading the code on the default branch. "Not found" means no matchin
 | --- | --- | --- |
 | Wallet sign-in (SIWE), sessions, logout | Yes | Yes |
 | Paper swaps, reset, history | Yes | Yes |
-| Idempotency keys and operation receipts | Yes | Not found |
-| Account export, deletion, logout-all | Yes | Not found |
+| Idempotency keys and operation receipts | Yes | Yes (ported Nov 14) |
+| Account export, deletion, logout-all | Yes | Yes (ported Nov 14) |
 | Scheduled paper bots | No (returns 501) | Yes (`bots.py`) |
 | System stats | Yes (no uptime, memory or load) | Yes |
 | Alpaca paper pilot | Yes (owner-only, one working order) | No |
 | Numeric model | Integer / BigInt, 18 decimals | `Decimal`, 18 decimals |
 | Concurrency control | Optimistic version check | Row locks (`SELECT … FOR UPDATE`) |
-| Test evidence | 30 tests on SQLite | 50 tests on SQLite, plus a PostgreSQL run in CI |
+| Test evidence | 59 tests on SQLite (26 backend, 4 guided, 29 shared cases) | 120 tests on SQLite (3 more run only on PostgreSQL), 123 on PostgreSQL, including the 29 shared cases |
 | Deployment evidence | Private Site is live; standalone Worker never deployed | Hetzner files exist; no recorded deployment |
 
 Neither backend is a superset of the other. Each has features the other lacks, and the swap fee, minimum trade and price rules are duplicated in JavaScript and Python.
@@ -40,7 +40,7 @@ Neither backend is a superset of the other. Each has features the other lacks, a
 
 **C. Keep both indefinitely.** Lowest effort now, but the two keep drifting. Every rule change is made twice, and "which backend is live for this user" stays an open question.
 
-## Decision (proposed): option B
+## Decision: option B
 
 FastAPI and PostgreSQL become the only long-term writer. The Worker and D1 remain the private-beta writer until a rehearsed cutover and then retire. The rules below stop the split from growing in the meantime.
 
@@ -52,11 +52,22 @@ FastAPI and PostgreSQL become the only long-term writer. The Worker and D1 remai
 
 ### Port checklist (server gains what the Worker has)
 
-- Idempotency keys with stored receipts and replay, including the 409 on a reused key with a different payload.
-- Account export (paginated), account deletion, and logout-all, with the recent-sign-in requirement.
-- The Alpaca paper pilot adapter, with the same one-working-order rule, no-resend rule and operator recovery steps ([hosted/README.md](../hosted/README.md#recovering-an-unresolved-order)).
-- Same-origin checks on writes (the server currently relies on the JSON content type and `SameSite=Lax`).
-- A shared fixture so both backends are tested against the same expected fills, fees and rejections.
+Status on November 14, 2026: four of the five items are done. The Alpaca pilot is the one left, and so are the general request rate limits (the Worker limits requests per IP and per account; the server only limits sign-in nonces).
+
+- ✅ Idempotency keys with stored receipts and replay, including the 409 on a reused key with a different payload. The key is now required on swap and reset, as on the Worker. A retry is answered from the stored receipt even if prices have since gone stale, and a retried reset never resets again. (`server/app/paper.py`, migration `0003`.)
+- ✅ Account export (paginated), account deletion, and logout-all, with the recent-sign-in requirement. (`server/app/account.py`.) One known difference: `trades[].id` is a number on the server and a UUID on the Worker.
+- ⬜ The Alpaca paper pilot adapter, with the same one-working-order rule, no-resend rule and operator recovery steps ([hosted/README.md](../hosted/README.md#recovering-an-unresolved-order)).
+- ✅ Same-origin checks on writes: a wrong `Origin` or `Sec-Fetch-Site: cross-site` is refused with 403. The allowed origin is `CIMP_SITE_URI` (set from `SITE_DOMAIN` in `infra/docker-compose.yml`), plus `CIMP_EXTRA_ORIGINS` for development.
+- ✅ A shared fixture so both backends are tested against the same expected fills, fees and rejections: [shared/paper-fixtures.json](../shared/paper-fixtures.json), 29 cases run by both test suites.
+
+**What the shared fixture found.** Building it showed the two backends already disagreed, and each difference was fixed on the server (the Worker is the live one, so it stayed as it is):
+
+- The server rounded the fee once at the end. The Worker rounds down at each step (dollar value, fee, amount received). A very large swap differed in the last digit. The server now rounds down at each step too, in a wider arithmetic context.
+- The server printed `fee_usd` rounded to 4 places. It now prints the exact value.
+- The server's number formatting silently rounded any amount of 29 or more digits (Python's default precision). It now formats exactly.
+- The server accepted `1e2`, `+5`, `.5`, `5.`, padded and JSON-number amounts. It now accepts only plain digits with up to 18 decimals, like the Worker.
+
+Also ported because the web app and status page need them on the new server: `features` and `backend` on `/api/health`, `/api/ready`, and the wallet's network (`chain_id`) in the sign-in message. A syntax error in an amount is a 400 on the Worker and a 422 on the server; the fixture accepts either.
 
 ## Roadmap order
 
@@ -65,7 +76,7 @@ Both roadmaps stay, in this order. Each step needs its exit evidence before the 
 1. **Close the private-beta launch gates** in [LAUNCH-READINESS.md](LAUNCH-READINESS.md) that are owner tasks: real-device wallet QA, an external monitor, spend caps, a D1 restore rehearsal, and legal review. These apply to whatever is live today.
 2. **Run the Alpaca paper smoke test** (the pilot is documented as "pending" until a dedicated paper account passes it).
 3. **Paper-core slices 0 to 2** from [ARCHITECTURE.md](ARCHITECTURE.md): one reconciled release baseline, market-data provenance, then the PostgreSQL journal and order path in staging.
-4. **Port checklist above**, alongside slice 2.
+4. **Port checklist above**, alongside slice 2. (Four of five items done; the Alpaca pilot and general rate limits remain.)
 5. **Paper-core slices 3 and 4:** migration rehearsal, then controlled cutover. The Worker retires after the rollback window.
 6. **Trade stage 1 on PostgreSQL** (Alpaca connection, account read, manual limit order), then stage 2 (real-time signals and Copilot) and later, each with its own exit evidence.
 7. **Parallel and gated separately:** the CIMP token and DEX track, and any live-money step. Neither is unlocked by completing a paper step.

@@ -30,6 +30,7 @@ router = APIRouter(prefix="/api")
 COOKIE = "cimp_session"
 ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 NONCE_LIMIT_PER_MIN = 20
+CHAINS = {1, 8453, 84532, 11155111}  # Ethereum, Base, Base Sepolia, Ethereum Sepolia: what a member's wallet may be on
 _nonce_hits: dict[str, deque] = defaultdict(deque)
 
 
@@ -60,14 +61,14 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def build_message(s: Settings, address: str, nonce: str, issued, expires) -> str:
+def build_message(s: Settings, address: str, nonce: str, issued, expires, chain_id: int | None = None) -> str:
     return (
         f"{s.site_domain} wants you to sign in with your Ethereum account:\n"
         f"{to_checksum_address(address)}\n\n"
-        "Sign in to Cimphawng. This is free and does not send a transaction.\n\n"
+        "Sign in to Cimphawng paper trading. Free message signature only. No transaction or token approval.\n\n"
         f"URI: {s.site_uri}\n"
         "Version: 1\n"
-        f"Chain ID: {s.chain_id}\n"
+        f"Chain ID: {chain_id or s.chain_id}\n"
         f"Nonce: {nonce}\n"
         f"Issued At: {issued.isoformat(timespec='seconds')}Z\n"
         f"Expiration Time: {expires.isoformat(timespec='seconds')}Z"
@@ -84,17 +85,21 @@ def user_out(u: User, s: Settings) -> dict:
 
 @router.get("/auth/nonce")
 async def nonce(
-    request: Request, address: str = Query(...), s: Settings = Depends(settings_dep),
-    db: AsyncSession = Depends(db_dep),
+    request: Request, address: str = Query(...), chain_id: str | None = Query(None, max_length=20),
+    s: Settings = Depends(settings_dep), db: AsyncSession = Depends(db_dep),
 ):
     if _rate_limited(request.client.host if request.client else "?"):
         raise HTTPException(429, "too many sign-in attempts; wait a minute")
     if not ADDRESS_RE.match(address):
         raise HTTPException(400, "invalid address")
+    # The message names the network the member's wallet is on, so their wallet doesn't warn about a mismatch.
+    chain = s.chain_id if chain_id is None else int(chain_id) if chain_id.isdigit() else 0
+    if chain not in CHAINS:
+        raise HTTPException(400, "Use Ethereum, Base, Base Sepolia or Ethereum Sepolia for wallet sign-in.")
     now = utcnow()
     n = secrets.token_hex(16)
     expires = now + timedelta(minutes=s.nonce_minutes)
-    msg = build_message(s, address, n, now, expires)
+    msg = build_message(s, address, n, now, expires, chain)
     await db.execute(delete(AuthNonce).where(AuthNonce.expires_at < now))  # tidy up old ones
     db.add(AuthNonce(nonce=n, address=address.lower(), message=msg, expires_at=expires))
     await db.commit()

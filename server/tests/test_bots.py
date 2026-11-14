@@ -7,10 +7,10 @@ import pytest
 from sqlalchemy import select
 
 from app.bots import HOUR, closed_only, rsi, sma, want_long
-from app.models import PaperBot, PaperTrade
+from app.models import PaperTrade
 from app.prices import TOKENS, USDC, GeckoTerminalFeed, PriceBook
 
-from .conftest import TEST_DB
+from .conftest import TEST_DB, make_client
 
 NOW = 1_800_000_000 + 1800  # half way through an hour
 
@@ -147,7 +147,7 @@ async def test_each_member_has_their_own_bot(app, client, signed_in):
 
     feed(app, {"ETH": UP, "cbBTC": DOWN})
     await start(signed_in)
-    other = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    other = make_client(app)
     async with other:
         assert (await sign_in(other, Account.create())).status_code == 200
         assert (await other.get("/api/bot")).json()["bot"] is None

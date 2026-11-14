@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from .conftest import sign_in
+from .conftest import make_client, sign_in
 
 
 async def test_new_member_starts_with_100_usdc(signed_in):
@@ -76,11 +76,10 @@ async def test_trades_history_and_reset(signed_in):
 
 async def test_members_are_isolated(app, client, wallet):
     from eth_account import Account
-    import httpx
 
     await sign_in(client, wallet)
     await client.post("/api/paper/swap", json={"from_asset": "USDC", "to_asset": "ETH", "amount": "40"})
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as other:
+    async with make_client(app) as other:
         await sign_in(other, Account.create())
         j = (await other.get("/api/paper")).json()
         assert j["total_usd"] == "100.00" and len(j["balances"]) == 1

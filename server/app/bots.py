@@ -127,10 +127,18 @@ class BotRunner:
                 log.warning("bot candles for %s failed: %s", asset, e)
                 continue
             for user_id in users:
-                await self.run_bot(user_id, asset, cs, now)
+                try:
+                    await self.run_bot(user_id, asset, cs, now)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:  # one member's bot failing must not stop everyone else's
+                    self.last_error = {"at": int(now), "error": f"bot {user_id}: {type(e).__name__}: {e}"[:200]}
+                    log.exception("bot %s failed", user_id)
 
     async def run_bot(self, user_id: int, asset: str, cs: list[tuple[int, float]], now: float) -> None:
         async with self.sessionmaker() as db:
+            if await db.get(User, user_id) is None:  # the member deleted their account since the bots were listed
+                return
             await ensure_account(db, user_id, self.s)  # commits; the lock below starts a new transaction
             bot = (await db.execute(select(PaperBot).where(PaperBot.user_id == user_id).with_for_update())).scalar()
             # re-checked under the lock: the member may have stopped or changed it, or another runner got here first
