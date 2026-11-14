@@ -16,3 +16,6 @@ dd{margin:0 0 10px;color:var(--brand-muted)}
 .order-row button{margin:0 8px 8px 0}
 [hidden]{display:none!important}
 @media(max-width:690px){.guided-grid{grid-template-columns:1fr}main{padding:0 18px}header{margin-top:22px}}
+#pilot-form{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+#pilot-form select,#pilot-price{background:var(--brand-raised);color:var(--brand-ink);border:1px solid var(--brand-edge);border-radius:8px;font:inherit;padding:8px}
+#pilot-price{width:8rem}

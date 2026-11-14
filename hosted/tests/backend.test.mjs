@@ -4,6 +4,7 @@ import {DatabaseSync,backup} from 'node:sqlite';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
+import {paperConfig} from '../lib/alpaca-paper.mjs';
 import {Wallet} from '../lib/ethers-server.mjs';
 import {handleApi,SITE_ORIGIN} from '../lib/hosted-api.mjs';
 const migration=fs.readdirSync(new URL('../drizzle/',import.meta.url)).filter(n=>n.endsWith('.sql')).sort().map(n=>fs.readFileSync(new URL('../drizzle/'+n,import.meta.url),'utf8')).join('\n');
@@ -11,8 +12,8 @@ function database(){const sqlite=new DatabaseSync(':memory:');sqlite.exec(migrat
  prepare(sql){return {bind(...args){return statement(sql,args);},...statement(sql,[])};},
  async batch(statements){sqlite.exec('BEGIN');try{const results=statements.map(s=>s.syncRun());sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e;}},sqlite};
  function statement(sql,args){const query=()=>sqlite.prepare(sql);return {async first(){return query().get(...args)||null;},async all(){return {results:query().all(...args)};},async run(){return this.syncRun();},syncRun(){const r=query().run(...args);return {meta:{changes:Number(r.changes)}};}};}}
-function fixture(t){const db=database();t.after(()=>db.sqlite.close());let time=Date.now();const fetcher=async url=>{const token=url.includes('0x420000')?'0x4200000000000000000000000000000000000006':'0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf';return Response.json({data:[{relationships:{base_token:{data:{id:'base_'+token}},quote_token:{data:{id:'base_0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'}}},attributes:{base_token_price_usd:token.startsWith('0x420')?'2000':'60000',reserve_in_usd:'1000000'}}]});};
- async function call(path,{method='GET',data,cookie,headers={}}={}){const r=await handleApi(new Request(SITE_ORIGIN+'/api'+path,{method,headers:{...(data===undefined?{}:{'Content-Type':'application/json',Origin:SITE_ORIGIN}),...(cookie?{Cookie:cookie}:{}),...(/^\/paper\/(swap|reset)$/.test(path)?{'Idempotency-Key':crypto.randomUUID()}:{}),...headers},...(data===undefined?{}:{body:JSON.stringify(data)})}),db,{clock:()=>time,fetcher});return {r,status:r.status,body:await r.json()};}
+function fixture(t,options={}){const db=database();t.after(()=>db.sqlite.close());let time=Date.now();const fetcher=async url=>{const token=url.includes('0x420000')?'0x4200000000000000000000000000000000000006':'0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf';return Response.json({data:[{relationships:{base_token:{data:{id:'base_'+token}},quote_token:{data:{id:'base_0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'}}},attributes:{base_token_price_usd:token.startsWith('0x420')?'2000':'60000',reserve_in_usd:'1000000'}}]});};
+ async function call(path,{method='GET',data,cookie,headers={}}={}){const r=await handleApi(new Request(SITE_ORIGIN+'/api'+path,{method,headers:{...(data===undefined?{}:{'Content-Type':'application/json',Origin:SITE_ORIGIN}),...(cookie?{Cookie:cookie}:{}),...(/^\/paper\/(swap|reset)$/.test(path)?{'Idempotency-Key':crypto.randomUUID()}:{}),...headers},...(data===undefined?{}:{body:JSON.stringify(data)})}),db,{clock:()=>time,fetcher,...options});return {r,status:r.status,body:await r.json()};}
  async function login(wallet=Wallet.createRandom()){const n=await call('/auth/nonce?address='+wallet.address);assert.equal(n.status,200);const signature=await wallet.signMessage(n.body.message);const login=await call('/auth/verify',{method:'POST',data:{nonce:n.body.nonce,signature}});assert.equal(login.status,200);for(const flag of ['HttpOnly','Secure','SameSite=Lax'])assert.ok(login.r.headers.get('Set-Cookie').includes(flag));return {wallet,cookie:login.r.headers.get('Set-Cookie').split(';')[0],nonce:n.body.nonce,signature};}
  return {db,call,login,advance(ms){time+=ms;}};}
 test('health, auth protection, correct SIWE origin, cookie flags and replay protection',async t=>{const f=fixture(t);assert.equal((await f.call('/health')).body.ok,true);assert.equal((await f.call('/paper')).status,401);const a=await f.login();const me=await f.call('/me',{cookie:a.cookie});assert.equal(me.body.address,a.wallet.address.toLowerCase());assert.equal((await f.call('/auth/verify',{method:'POST',data:{nonce:a.nonce,signature:a.signature}})).status,401);const n=await f.call('/auth/nonce?address='+a.wallet.address);assert.ok(n.body.message.startsWith(new URL(SITE_ORIGIN).host+' wants'));assert.ok(n.body.message.includes('Chain ID: 84532'));});
@@ -40,3 +41,114 @@ test('readiness reports feed health, release capabilities and unsupported bots t
 test('export pagination preserves archived records without leaking another wallet',async t=>{const f=fixture(t),a=await f.login(),b=await f.login(),at=Date.now();for(let i=0;i<205;i++){const id=crypto.randomUUID();f.db.sqlite.prepare('INSERT INTO paper_trades(id,address,data,created_at,archived) VALUES(?,?,?,?,?)').run(id,a.wallet.address.toLowerCase(),JSON.stringify({id}),at,1);}const one=await f.call('/account/export',{cookie:a.cookie}),two=await f.call('/account/export?cursor='+one.body.next_cursor,{cookie:a.cookie});assert.equal(one.body.trades.length,200);assert.equal(two.body.trades.length,5);assert.equal(new Set([...one.body.trades,...two.body.trades].map(r=>r.id)).size,205);assert.ok(one.body.trades.every(r=>r.archived));assert.equal((await f.call('/account/export',{cookie:b.cookie})).body.trades.length,0);});
 test('readiness returns degraded rather than inventing prices after upstream failure',async t=>{const f=fixture(t);const r=await handleApi(new Request(SITE_ORIGIN+'/api/ready'),f.db,{fetcher:async()=>{throw Error('offline');}});assert.equal(r.status,503);const j=await r.json();assert.equal(j.status,'degraded');assert.ok(j.feed.every(v=>v.last_success_at===null&&v.failures===1));});
 test('fixture backup can be restored with balances, fills and retry receipts intact',async t=>{const f=fixture(t),a=await f.login();await f.call('/paper/swap',{method:'POST',cookie:a.cookie,data:{from_asset:'USDC',to_asset:'ETH',amount:'10'}});const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cimp-recovery-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const file=path.join(dir,'backup.db');await backup(f.db.sqlite,file);const restored=new DatabaseSync(file);try{assert.equal(restored.prepare('PRAGMA integrity_check').get().integrity_check,'ok');assert.equal(JSON.parse(restored.prepare('SELECT balances FROM accounts').get().balances).USDC,'90');assert.equal(restored.prepare('SELECT count(*) AS n FROM paper_trades').get().n,1);assert.equal(restored.prepare('SELECT count(*) AS n FROM operation_receipts').get().n,1);}finally{restored.close();}});
+
+const PILOT = '/alpaca-paper';
+const ACCOUNT_ID = '862f8d83-7840-4cae-8b7c-523caba092a5';
+const BROKER_ID = '7faeed58-316d-4444-8373-cf634aa637a1';
+function pilotFixture(t, {lost=false, missing=false, accountId=ACCOUNT_ID, blocked=false}={}) {
+ const owner=Wallet.createRandom(), calls=[];
+ let raw, visible=!missing, cancelStatus='pending_cancel';
+ const alpaca=paperConfig({ALPACA_PAPER_ENABLED:'true', ALPACA_PAPER_OWNER:owner.address,
+  ALPACA_PAPER_ACCOUNT_ID:ACCOUNT_ID,ALPACA_PAPER_KEY:'fixture-key',ALPACA_PAPER_SECRET:'fixture-secret'});
+ const fetcher=async (input, init)=>{
+  const u=new URL(input);
+  assert.equal(u.origin,'https://paper-api.alpaca.markets');
+  assert.equal(init.redirect,'error');
+  assert.equal(init.headers['APCA-API-SECRET-KEY'],'fixture-secret');
+  calls.push(init.method+' '+u.pathname);
+  if(u.pathname==='/v2/account')return Response.json({id:accountId,status:'ACTIVE',account_blocked:false,trading_blocked:blocked});
+  if(init.method==='POST' && u.pathname==='/v2/orders'){
+   assert.equal(raw,undefined,'one outbound POST per ticket');
+   const data=JSON.parse(init.body);
+   assert.deepEqual(data,{client_order_id:data.client_order_id,symbol:'SPY',qty:'1',side:'buy',
+    type:'limit',time_in_force:'day',limit_price:'300.25',extended_hours:false});
+   raw={...data,id:BROKER_ID,status:'new',filled_qty:'0'};
+   if(lost)throw new Error('unexpected connection loss with secret-like fixture-secret');
+   return Response.json(raw);
+  }
+  if(init.method==='GET' && u.pathname==='/v2/orders:by_client_order_id'){
+   if(!visible || u.searchParams.get('client_order_id')!==raw?.client_order_id)return new Response(null,{status:404});
+   return Response.json(raw);
+  }
+  if(init.method==='DELETE' && u.pathname==='/v2/orders/'+BROKER_ID){
+   raw.status=cancelStatus;
+   if(cancelStatus==='filled') {raw.filled_qty='1';return new Response(null,{status:422});}
+   return new Response(null,{status:204});
+  }
+  assert.fail('unexpected broker request');
+ };
+ const f=fixture(t,{alpaca,alpacaFetcher:fetcher});
+ return {...f, calls, owner, loginOwner:()=>f.login(owner), expose:()=>{visible=true;},
+  update:(status,qty)=>Object.assign(raw,{status,filled_qty:qty}), fillOnCancel:()=>{cancelStatus='filled';}};
+}
+const reviewPilot=(f,a,data={symbol:'SPY',limit_price:'300.25'},headers)=>f.call(PILOT+'/review',{method:'POST',cookie:a.cookie,data,headers});
+const orderPilot=(f,a,id,action,data={})=>f.call(PILOT+'/orders/'+id+(action?'/'+action:''),{method:action?'POST':'GET',cookie:a.cookie,...(action?{data}:{})});
+
+test('Alpaca pilot is off by default and only available to a signed-in owner with same-origin writes',async t=>{
+ const disabled=fixture(t), f=pilotFixture(t), a=await f.loginOwner(), stranger=await f.login();
+ assert.equal(paperConfig({ALPACA_PAPER_ENABLED:'true'}),null);
+ assert.equal((await disabled.call(PILOT)).status,404);
+ assert.equal((await f.call(PILOT)).status,401);
+ assert.equal((await f.call(PILOT,{cookie:stranger.cookie})).status,404);
+ assert.equal((await reviewPilot(f,a,undefined,{Origin:'https://unrelated.example'})).status,403);
+ assert.equal((await reviewPilot(f,a,undefined,{Origin:''})).status,403);
+ const approved=await reviewPilot(f,a); assert.equal(approved.status,201);
+ assert.equal((await orderPilot(f,stranger,approved.body.id,'submit')).status,404);
+ assert.equal((await orderPilot(f,a,approved.body.id,'submit',{limit_price:'309.99'})).status,400);
+ assert.equal((await reviewPilot(f,a,{symbol:'BTC/USD',limit_price:'300.25'})).status,400);
+ assert.equal((await reviewPilot(f,a,{symbol:'SPY',limit_price:'1000.01'})).status,400);
+ f.advance(60000);
+ assert.equal((await orderPilot(f,a,approved.body.id,'submit')).status,409);
+ assert.deepEqual(f.calls,[]);
+});
+
+test('the configured paper account must match and be eligible before broker submission',async t=>{
+ for(const settings of [{accountId:BROKER_ID},{blocked:true}]){
+  const f=pilotFixture(t,settings), a=await f.loginOwner(), r=await reviewPilot(f,a);
+  assert.ok([503,409].includes((await orderPilot(f,a,r.body.id,'submit')).status));
+  assert.deepEqual(f.calls,['GET /v2/account']);
+ }
+});
+
+test('concurrent and uncertain Alpaca submissions send once; a missing order stays unresolved',async t=>{
+ const f=pilotFixture(t,{lost:true,missing:true}), a=await f.loginOwner(), first=(await reviewPilot(f,a)).body, second=(await reviewPilot(f,a)).body;
+ const responses=await Promise.all([orderPilot(f,a,first.id,'submit'),orderPilot(f,a,first.id,'submit')]);
+ assert.ok(responses.every(r=>r.status===202 && r.body.status==='checking'));
+ assert.equal(f.calls.filter(c=>c==='POST /v2/orders').length,1);
+ assert.equal((await orderPilot(f,a,second.id,'submit')).status,409);
+ assert.equal((await orderPilot(f,a,first.id)).status,202);
+ f.expose();
+ const status=await orderPilot(f,a,first.id,'submit');
+ assert.equal(status.body.status,'new');
+ assert.ok(!JSON.stringify(status.body).includes('fixture-secret'));
+ assert.equal(f.calls.filter(c=>c==='POST /v2/orders').length,1);
+});
+
+test('partial fills and cancellation use broker-confirmed status and retain the terminal receipt',async t=>{
+ const f=pilotFixture(t), a=await f.loginOwner(), r=(await reviewPilot(f,a)).body;
+ assert.equal((await orderPilot(f,a,r.id,'submit')).body.status,'new');
+ f.update('partially_filled','0.4');
+ const pending=await orderPilot(f,a,r.id,'cancel');
+ assert.equal(pending.body.cancel_acknowledged,true);
+ assert.equal(pending.body.status,'pending_cancel');
+ assert.equal(pending.body.filled_qty,'0.4');
+ await orderPilot(f,a,r.id,'cancel');
+ assert.equal(f.calls.filter(c=>c.startsWith('DELETE ')).length,1);
+ f.update('canceled','0.4');
+ const final=await orderPilot(f,a,r.id);
+ assert.equal(final.body.status,'canceled');
+ assert.equal(final.body.filled_qty,'0.4');
+ const count=f.calls.length;
+ assert.equal((await orderPilot(f,a,r.id,'submit')).body.status,'canceled');
+ assert.equal(f.calls.length,count);
+ assert.equal((await f.call(PILOT,{cookie:a.cookie})).body.orders[0].status,'canceled');
+});
+
+test('a fill that beats cancellation is reported as filled',async t=>{
+ const f=pilotFixture(t), a=await f.loginOwner(), r=(await reviewPilot(f,a)).body;
+ await orderPilot(f,a,r.id,'submit');
+ f.fillOnCancel();
+ const final=await orderPilot(f,a,r.id,'cancel');
+ assert.equal(final.body.status,'filled');
+ assert.equal(final.body.cancel_acknowledged,false);
+});

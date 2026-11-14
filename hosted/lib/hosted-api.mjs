@@ -1,3 +1,4 @@
+import {paperPilot} from './alpaca-paper.mjs';
 import RELEASE from './release.mjs';
 import { getAddress, verifyMessage, parseUnits, formatUnits } from './ethers-server.mjs';
 const SCALE=10n**18n;
@@ -48,12 +49,20 @@ async function portfolio(db,address,prices,now){
 async function signedIn(request,db,now){const cookie=request.headers.get('Cookie')||'';const token=cookie.match(/(?:^|;\s*)cimp_session=([a-f0-9]{64})(?:;|$)/)?.[1];if(!token)fail(401,'Not signed in.');const session=await db.prepare('SELECT address FROM sessions WHERE hash=? AND expires>?').bind(await hash(token),now).first();if(!session)fail(401,'Session expired. Please sign in again.');await db.prepare('UPDATE accounts SET last_seen=? WHERE address=? AND last_seen<?').bind(now,session.address,now-300000).run();return session.address;}
 const user=address=>({address,display_name:null,role:'member'});
 async function body(request){if(Number(request.headers.get('content-length')||0)>4096)fail(413,'Request is too large.');const reader=request.body?.getReader();const chunks=[];let size=0;if(reader){for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>4096){await reader.cancel();fail(413,'Request is too large.');}chunks.push(value);}}const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}try{const value=JSON.parse(new TextDecoder().decode(bytes));if(!value||typeof value!=='object'||Array.isArray(value))fail(400,'JSON must be an object.');return value;}catch{fail(400,'JSON must be an object.');}}
-async function dispatch(request,db,{origin,now,fetcher,clock}){
+async function dispatch(request,db,{origin,now,fetcher,clock,alpaca,alpacaFetcher}){
  const url=new URL(request.url),path=url.pathname.replace(/\/$/,'');
  const write=['POST','PUT','PATCH','DELETE'].includes(request.method);
  if(write){if(request.method!=='POST')fail(405,'Method not allowed.');if((request.headers.get('content-type')||'').split(';')[0].trim().toLowerCase()!=='application/json')fail(415,'Content-Type must be application/json.');const suppliedOrigin=request.headers.get('origin');if(suppliedOrigin&&suppliedOrigin!==origin)fail(403,'Cross-origin writes are blocked.');if(request.headers.get('sec-fetch-site')==='cross-site')fail(403,'Cross-site writes are blocked.');}
  if(!write&&request.method!=='GET')fail(405,'Method not allowed.');
  const ip=await hash(request.headers.get('cf-connecting-ip')||'unknown');
+ if(path==='/api/alpaca-paper'||path.startsWith('/api/alpaca-paper/')){
+  if(!alpaca)fail(404,'Alpaca paper pilot is not available.');
+  if(write && request.headers.get('origin')!==origin)fail(403,'A same-origin request is required.');
+  const address=await signedIn(request,db,now);
+  if(address!==alpaca.owner)fail(404,'Alpaca paper pilot is not available.');
+  await rate(db,'alpaca-pilot:'+address,now,30);
+  return paperPilot({request,path,db,config:alpaca,clock,fetcher:alpacaFetcher||fetch,read:body,json});
+ }
  if(path==='/api/release'&&!write)return json({...RELEASE,features:FEATURES});
  if(path==='/api/health'&&!write){await db.prepare('SELECT 1').first();const prices=await cachedPrices(db,now);return json({ok:true,mode:'paper-only',backend:'cloudflare-d1',prices_fresh:Object.keys(TOKENS).every(a=>fresh(prices,a,now)),features:FEATURES,release:RELEASE});}
  if(path==='/api/ready'&&!write){const prices=await priceBook(db,now,fetcher);const ready=Object.keys(TOKENS).every(a=>fresh(prices,a,now));const {results}=await db.prepare('SELECT * FROM feed_status').all();return json({ok:ready,status:ready?'ready':'degraded',database:'reachable',release:RELEASE,features:FEATURES,feed:results.map(r=>({asset:r.asset,age_s:prices[r.asset]?Math.max(0,Math.floor((now-prices[r.asset].at)/1000)):null,last_success_at:r.success_at,last_failure_at:r.error_at,last_error:r.error_code,successes:r.successes,failures:r.failures}))},ready?200:503);}

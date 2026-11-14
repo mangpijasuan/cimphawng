@@ -40,7 +40,7 @@ step('release fingerprint',()=>{
  if(RELEASE.version!=='0.2.0-beta.1'||RELEASE.channel!=='private-beta')throw Error('Unexpected release metadata');
 });
 
-step('backend test suite (21)',()=>{
+step('backend test suite',()=>{
  // npm test exits non-zero on failure; run() already throws in that case.
  run('npm',['test'],hosted);
 });

@@ -54,8 +54,30 @@
     <p>Advance the simulator to see a fill or a cancellation confirmation. Your practice history stays in this browser.</p>
     <div id="orders" aria-live="polite"><p>No practice orders yet.</p></div>
   </section>
+  <section id="alpaca-pilot" aria-labelledby="pilot-title" hidden>
+    <p class="eyebrow">Owner pilot · Alpaca Paper</p>
+    <h2 id="pilot-title">Review a manual paper order</h2>
+    <p>One ETF share, using your Alpaca paper account. Enter your own limit price. This panel has no market quotes or trade signals.</p>
+    <form id="pilot-form">
+      <label for="pilot-symbol">ETF</label>
+      <select id="pilot-symbol" required></select>
+      <label for="pilot-price">Limit per share (USD)</label>
+      <input id="pilot-price" type="text" inputmode="decimal" maxlength="7" placeholder="0.00" required>
+      <button class="primary" type="submit">Review Alpaca paper order</button>
+    </form>
+    <div id="pilot-review" hidden>
+      <p id="pilot-ticket"></p>
+      <p>No exit is placed. The limit order may never fill.</p>
+      <button id="pilot-submit" class="primary" type="button">Send to Alpaca Paper</button>
+    </div>
+    <p id="pilot-feedback" role="status"></p>
+    <h3>Alpaca paper orders</h3>
+    <button id="pilot-refresh" type="button">Refresh paper orders</button>
+    <div id="pilot-orders" aria-live="polite"></div>
+  </section>
   <noscript><p>Enable JavaScript to use the practice order workflow.</p></noscript>
 </main>
 <script type="module" src="./guided.mjs"></script>
+<script type="module" src="./guided-alpaca.mjs"></script>
 </body>
 </html>
