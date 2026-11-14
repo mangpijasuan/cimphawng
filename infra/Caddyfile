@@ -6,6 +6,9 @@
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
+		# The pages use inline <script>/<style>, so 'unsafe-inline' is still needed until those move
+		# into files (or get nonces). Everything else is locked to this site plus the APIs the pages call.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.geckoterminal.com https://api.dexscreener.com https://api.hyperliquid.xyz https://sepolia.base.org; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
