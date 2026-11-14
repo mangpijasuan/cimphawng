@@ -31,7 +31,7 @@ The deployed audience remains owner-private. No mainnet token, real trading, pai
 
 ## Source and release verification
 
-The repository's default branch is `claude/hobby-project-app-webapp-nmtkai`; `main` is older. Use the validated release branch/PR commit, not an assumed `main`.
+The repository's default branch is `claude/hobby-project-app-webapp-nmtkai`. There is no `main` branch (it was deleted on November 14, 2026). Use the validated release commit on the default branch.
 
 GitHub is the canonical source for release inputs. The Site repository retains its Vinext
 wrapper, hosting configuration and generated release provenance.

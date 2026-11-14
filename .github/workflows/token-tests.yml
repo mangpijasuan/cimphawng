@@ -3,7 +3,7 @@ on:
   pull_request:
     paths: ["token/**", "index.html", "infra/docker-compose.yml", ".github/workflows/token-tests.yml"]
   push:
-    branches: [main, "claude/hobby-project-app-webapp-nmtkai"]
+    branches: ["claude/hobby-project-app-webapp-nmtkai"]
     paths: ["token/**", "index.html", "infra/docker-compose.yml", ".github/workflows/token-tests.yml"]
 permissions:
   contents: read

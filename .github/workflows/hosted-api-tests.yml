@@ -3,7 +3,7 @@ on:
   pull_request:
     paths: ['hosted/**','index.html','assets/**','ui.css','desk.html','setup.html','docs/CIMP-*.md','token/**','guide.html','guided*','account*','status*','beta.css','brand.css','.github/workflows/hosted-api-tests.yml']
   push:
-    branches: [main,'claude/hobby-project-app-webapp-nmtkai']
+    branches: ['claude/hobby-project-app-webapp-nmtkai']
     paths: ['hosted/**','index.html','assets/**','ui.css','desk.html','setup.html','docs/CIMP-*.md','token/**','guide.html','guided*','account*','status*','beta.css','brand.css','.github/workflows/hosted-api-tests.yml']
 permissions:
   contents: read

@@ -103,7 +103,7 @@ API docs are at **https://cimphawng.com/api/docs**.
 cd ~/cimphawng && git pull && cd infra && docker compose up -d --build
 ```
 
-(Automatic deploys on every merge to `main` come later with GitHub Actions.)
+(Automatic deploys on every merge to the default branch come later with GitHub Actions.)
 
 ## 7. Backups
 
