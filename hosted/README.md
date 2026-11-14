@@ -18,7 +18,7 @@ node scripts/serve-preview.mjs   # local static preview with /guide /account /st
 
 No npm installation is needed for these tests: the exact ethers 6.15 browser-compatible ESM build
 is vendored in `lib/ethers-server.mjs`. Its MIT license is in `../token/web/ethers-LICENSE.md`.
-Tests use real SQLite and ephemeral signing wallets. The 21 tests cover single-use/expired/wrong
+Tests use real SQLite and ephemeral signing wallets. They cover single-use/expired/wrong
 signatures, secure session flags, persisted account isolation, concurrent spending and reset conflicts,
 stale feeds, bad input, logout, rate limiting, and oversized requests.
 
@@ -43,6 +43,67 @@ independent Cloudflare account.
 
 No deployment command has been run against an independent Cloudflare account. The placeholder config
 is deliberately not usable without choosing a real database and origin.
+
+## Alpaca paper pilot
+
+This optional panel in Guided Trading is for one operator and one **dedicated**
+Alpaca paper account on the standalone Cloudflare Worker. It is disabled by
+default. The static preview and the managed Site do not activate it. The
+fictional example never routes to Alpaca. The pilot has no trade signals,
+automation, real-money routing, options or crypto execution.
+
+Only on an isolated private Worker deployment with its own D1 and the exact
+HTTPS `SITE_ORIGIN`, apply all migrations and set these worker bindings:
+
+| Binding | Value |
+| --- | --- |
+| `ALPACA_PAPER_ENABLED` | `true` to open the pilot; omit or set `false` otherwise |
+| `ALPACA_PAPER_OWNER` | Exact operator wallet used for Cimphawng wallet sign-in |
+| `ALPACA_PAPER_ACCOUNT_ID` | UUID returned by Alpaca Paper `GET /v2/account` |
+| `ALPACA_PAPER_KEY`, `ALPACA_PAPER_SECRET` | Paper-only credentials stored as Worker secrets; never put them in source, chat, or the browser |
+
+The adapter refuses a different broker account, uses
+[Alpaca’s paper endpoint](https://docs.alpaca.markets/us/v1.1/docs/authentication-1)
+without a configurable base URL, and blocks redirects. The initial order is
+one share of SPY or QQQ, buy-only, day limit, regular-hours execution, with a
+maximum entered limit of $1,000. It allows one unresolved pilot order at a
+time. This is an integration test scope, not a recommendation or a production
+risk budget. Pilot records belong to the operator's broker account and are
+separate from the simulated wallet. Rotating the operator or resetting the
+broker account needs a new isolated pilot, not reuse of its records.
+
+### Dedicated paper account smoke test (pending)
+
+Before enabling the private Worker, put the same bindings in a git-ignored
+`hosted/.dev.vars` on your local machine and run this read-only check from the
+repo root (Node 24 recommended):
+
+```sh
+node --env-file=hosted/.dev.vars hosted/scripts/alpaca-paper-preflight.mjs
+```
+
+The check verifies that the key and secret belong to the expected Alpaca
+paper account and that the account is eligible for orders. It never submits
+an order or prints the account response. Once it passes, use the isolated
+Worker and proceed with the signed-in test:
+
+1. Sign in with the configured wallet and open Guided Trading. A signed-out or
+   different wallet must not see the pilot panel.
+2. During a regular session, choose one share and enter an independently
+   checked limit for the test. Review the quantity, cap and paper label.
+   Submit once and compare the status and order terms with Alpaca Paper.
+3. Reopen the page, click **Check status**, and confirm the same order with no
+   duplicate. Request cancellation if still working. Verify the final status
+   and filled quantity against the broker, including any fill that preceded
+   cancellation. Record the paper result without credentials or account data.
+
+The dispatch claim is saved before contacting Alpaca. A timeout, ambiguous
+response, or broker 404 leaves the order unresolved; the adapter never sends
+it again. If the order stays unresolved, suspend submission and reconcile the
+stored client order ID with the broker before further testing; a missing lookup
+alone does not prove no order exists. There is no in-product override.
+Disabling the pilot does not cancel working orders; check and cancel them in
+Alpaca Paper as needed.
 
 ## Storage and safeguards
 

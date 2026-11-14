@@ -15,9 +15,7 @@ fills or confirms a cancellation; requesting cancellation alone keeps the unfill
 Order writes use Web Locks to serialize changes across tabs in a secure browser context.
 Run `node --test hosted/tests/guided-paper.test.mjs` to exercise the practice broker.
 
-This slice does not connect to Alpaca or display validated signals. The next connector PR
-must implement paper-only routing, broker credentials, and reconciliation against an actual paper account.
-The offline ML prototype remains separate.
+The fictional example always stays in the browser. A separate [owner-only Alpaca paper pilot](../hosted/README.md#alpaca-paper-pilot) can be enabled on the standalone Worker for manual ETF limit orders. The pilot is off by default; it still needs a dedicated paper-account smoke test. Neither flow displays validated signals. The offline ML prototype remains separate.
 
 ## The beginner journey
 
