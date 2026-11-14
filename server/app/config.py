@@ -13,8 +13,12 @@ class Settings(BaseSettings):
     # Sign-in with Ethereum (EIP-4361) message details
     site_domain: str = "cimphawng.com"
     site_uri: str = "https://cimphawng.com"
-    chain_id: int = 8453  # Base mainnet
+    chain_id: int = 8453  # Base mainnet: the network named in the sign-in message when the app doesn't say
     nonce_minutes: int = 10
+
+    # Writes (POST) are accepted only from the site's own origin (site_uri), plus any listed here,
+    # comma-separated, e.g. "http://localhost:8000" while developing.
+    extra_origins: str = ""
 
     # Comma-separated wallet addresses that get the "owner" role
     owner_addresses: str = ""
@@ -39,6 +43,10 @@ class Settings(BaseSettings):
 
     # System monitor: how long database figures are cached
     stats_cache_s: int = 5
+
+    @property
+    def allowed_origins(self) -> set[str]:
+        return {o.strip().rstrip("/") for o in [self.site_uri, *self.extra_origins.split(",")] if o.strip()}
 
     @property
     def owners(self) -> set[str]:

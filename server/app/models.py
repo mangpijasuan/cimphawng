@@ -99,6 +99,20 @@ class PaperTrade(Base):
     archived: Mapped[bool] = mapped_column(default=False)
 
 
+class OperationReceipt(Base):
+    """The outcome of a paper swap or reset, kept so a retry with the same request ID gets the original answer
+    instead of repeating the operation (a lost response must never mean a double spend)."""
+
+    __tablename__ = "operation_receipts"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)  # the client's Idempotency-Key
+    kind: Mapped[str] = mapped_column(String(8))  # "swap" or "reset"
+    payload_hash: Mapped[str] = mapped_column(String(64))  # SHA-256 of what was asked, to catch a reused key
+    result: Mapped[str] = mapped_column(Text)  # JSON: the trade for a swap, {} for a reset
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class PaperBot(Base):
     """A member's paper bot: one strategy on one coin, trading their paper wallet on closed 1-hour candles."""
 

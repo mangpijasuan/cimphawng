@@ -25,7 +25,7 @@ async def test_message_is_eip4361_with_domain_chain_and_nonce(client, wallet):
     assert lines[0] == "cimphawng.test wants you to sign in with your Ethereum account:"
     assert lines[1] == wallet.address  # EIP-55 checksummed
     assert "Chain ID: 8453" in lines and f"Nonce: {j['nonce']}" in lines
-    assert "does not send a transaction" in j["message"]
+    assert "No transaction or token approval" in j["message"]
 
 
 async def test_not_signed_in_is_401(client):

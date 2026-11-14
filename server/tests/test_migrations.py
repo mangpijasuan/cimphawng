@@ -1,5 +1,6 @@
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 
 from app import migrate
@@ -15,7 +16,8 @@ def diffs(conn):
 async def test_migrations_build_exactly_the_models(app):
     async with app.state.engine.connect() as conn:
         assert await conn.run_sync(diffs) == []
-        assert (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalar() == "0002"
+        latest = ScriptDirectory.from_config(migrate._config(None)).get_current_head()
+        assert (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalar() == latest
 
 
 async def test_database_from_before_migrations_is_upgraded_in_place(app):
