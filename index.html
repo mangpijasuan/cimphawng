@@ -2680,6 +2680,7 @@
     {id:4,name:'Scalper X',pair:'BTC / USDT \u00b7 1m Scalping',roi:'+8.1%',win:'58%',trades:1240,profit:'+$1,120',on:false,spark:[20,18,19,16,17,15,16,14,15,13]}
   ];
   const $=id=>document.getElementById(id);
+  const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   function sparkSVG(data){
     const max=Math.max(...data),min=Math.min(...data),w=260,h=36;
@@ -2687,7 +2688,7 @@
     return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:36px;width:100%"><polyline points="${pts}" fill="none" stroke="#39ff88" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   }
   function renderBots(){
-    $('tb-botgrid').innerHTML=bots.map(b=>`<article class="tb-bot"><div class="tb-top"><div><h3>${b.name}</h3><p>${b.pair}</p></div><button class="tb-toggle ${b.on?'on':''}" aria-label="Toggle ${b.name}" data-tb-bot="${b.id}"></button></div>${sparkSVG(b.spark)}<div class="tb-stats"><div><b>${b.roi}</b><span>ROI 30d</span></div><div><b>${b.win}</b><span>Win rate</span></div><div><b>${b.trades}</b><span>Trades</span></div></div><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--dim)">Profit</span><b class="tb-up">${b.profit}</b><span>${b.on?'\u25cf RUNNING':'\u25cb PAUSED'}</span></div></article>`).join('');
+    $('tb-botgrid').innerHTML=bots.map(b=>`<article class="tb-bot"><div class="tb-top"><div><h3>${esc(b.name)}</h3><p>${esc(b.pair)}</p></div><button class="tb-toggle ${b.on?'on':''}" aria-label="Toggle ${esc(b.name)}" data-tb-bot="${esc(b.id)}"></button></div>${sparkSVG(b.spark)}<div class="tb-stats"><div><b>${esc(b.roi)}</b><span>ROI 30d</span></div><div><b>${esc(b.win)}</b><span>Win rate</span></div><div><b>${esc(b.trades)}</b><span>Trades</span></div></div><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--dim)">Profit</span><b class="tb-up">${esc(b.profit)}</b><span>${b.on?'\u25cf RUNNING':'\u25cb PAUSED'}</span></div></article>`).join('');
     const active=bots.filter(b=>b.on).length;
     $('tb-active').textContent=active+' / 4';
   }
@@ -2697,13 +2698,13 @@
     {sym:'ETH',side:'LONG',entry:3310,now:3524,pnl:'+$1,864',pct:'+6.47%'},
     {sym:'SOL',side:'SHORT',entry:182.4,now:171.42,pnl:'+$642',pct:'+6.02%'}
   ];
-  $('tb-pos').innerHTML=positions.map(p=>`<tr><td><b>${p.sym}</b></td><td>${p.side}</td><td style="font-size:11px">$${fmt(p.entry)} \u2192 $${fmt(p.now)}</td><td><b class="tb-up">${p.pnl}</b><div class="tb-up" style="font-size:11px">${p.pct}</div></td></tr>`).join('');
+  $('tb-pos').innerHTML=positions.map(p=>`<tr><td><b>${esc(p.sym)}</b></td><td>${esc(p.side)}</td><td style="font-size:11px">$${fmt(p.entry)} \u2192 $${fmt(p.now)}</td><td><b class="tb-up">${esc(p.pnl)}</b><div class="tb-up" style="font-size:11px">${esc(p.pct)}</div></td></tr>`).join('');
   let feedItems=[
     {s:'BUY',t:'Bought 0.084 BTC @ $67,810',bot:'Momentum Alpha'},
     {s:'SELL',t:'Sold 1.20 ETH @ $3,518',bot:'Grid Master'},
     {s:'BUY',t:'Bought 42 SOL @ $170.90',bot:'Mean Reversion'}
   ];
-  function renderFeed(){$('tb-feed').innerHTML=feedItems.map(f=>`<li><b class="${f.s==='BUY'?'tb-up':'tb-down'}">${f.s}</b> ${f.t} \u00b7 ${f.bot}</li>`).join('');}
+  function renderFeed(){$('tb-feed').innerHTML=feedItems.map(f=>`<li><b class="${f.s==='BUY'?'tb-up':'tb-down'}">${esc(f.s)}</b> ${esc(f.t)} \u00b7 ${esc(f.bot)}</li>`).join('');}
   function genData(seed,len){
     let v=seed,arr=[];for(let i=0;i<len;i++){v+=(Math.random()-0.42)*seed*0.018;arr.push(v)}
     const info=PRICES[curPair],lo=info.low*1.004,hi=info.high*0.996,mn=Math.min(...arr),mx=Math.max(...arr);
