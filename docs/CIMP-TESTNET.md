@@ -2,7 +2,7 @@
 
 ## What is ready
 
-- `token/contracts/CimphawngTestToken.sol`: OpenZeppelin ERC-20, Solidity 0.8.30.
+- `token/contracts/CimphawngTestToken.sol`: OpenZeppelin ERC-20, Solidity 0.8.38.
 - Name **Cimphawng Test Token**, symbol **CIMP**, 18 decimals.
 - **1,000,000 test CIMP**, minted once to the constructor recipient; the browser uses the deploying account.
 - No additional mint, admin, pause, blacklist, transfer tax, upgrade, staking, redemption, or sales mechanism.
@@ -97,7 +97,7 @@ injected wallet; a dedicated multi-wallet picker and WalletConnect are not imple
 ## Explorer source verification
 
 After deployment, open the contract address on Base Sepolia BaseScan and use **Verify and Publish**.
-Select Solidity Standard JSON Input, compiler **v0.8.30+commit.73712a01**, MIT license, and upload
+Select Solidity Standard JSON Input, compiler **v0.8.38+commit.1835d247**, MIT license, and upload
 `token/web/standard-input.json`. Use contract `CimphawngTestToken.sol:CimphawngTestToken`.
 The constructor argument is the deploying wallet address encoded as one ABI `address` (32-byte word).
 The standard input already includes the optimizer and EVM settings. Verify with the exact committed
