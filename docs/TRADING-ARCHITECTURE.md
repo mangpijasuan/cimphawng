@@ -1,9 +1,17 @@
 # Cimphawng Trade — product and execution architecture
 
-**Proposed architecture · November 13, 2026**  
+**Proposed architecture · November 13, 2026 · Platform decision updated November 14, 2026**  
 **Target domain:** `cimphawng.trade` (ownership, DNS, TLS and OAuth registration still to verify).
 
-Cimphawng Trade is a multi-asset terminal for real-time signals, order review and opt-in execution. Launch with Alpaca paper accounts, then promote each live capability independently. Keep the near-black navy theme, red-and-navy mark, and English/Zomi interface.
+> **Status, November 14, 2026: the Trade product is being built on Olbos Trade, not on this repository's server.** The owner decided that Cimphawng Trade is a **brand on the Olbos Trade platform**: one server shared with Olbos Trade (worldwide), with the same quantitative research, algo trading and automated execution, and Alpaca for options, crypto and equity. Cimphawng Trade is the Zomi-focused brand. The first slice (brand, language and UI) is [OlbosTrade PR 286](https://github.com/olbos-technologies/OlbosTrade/pull/286); how brands work is described in that repository's `docs/BRAND_PLATFORM.md`.
+>
+> What this changes in this document:
+> - **Still the requirements.** The product design, the three execution modes, market-data and signal-quality rules, order, risk and reconciliation rules, the CIMP section and the promotion gates describe *what* Cimphawng Trade must do. Where Olbos Trade already meets a rule, that satisfies it; where it does not, the rule is still the bar.
+> - **Superseded.** "Runtime and trust boundaries", the starter schema and "Use the existing FastAPI/PostgreSQL direction" describe *this repository's* server as the Trade backend. They no longer do. The Trade runtime, broker connection, signals and execution live in Olbos Trade, under that repository's own rules.
+> - **Unchanged and separate.** The CIMP token and DEX track (below) and the paper-trading core in this repository are not part of the Olbos Trade platform. See [BACKEND-DECISION.md](BACKEND-DECISION.md#addendum-november-14-2026-trade-is-built-on-olbos-trade).
+> - **Not authorized by this note.** No domain cutover, Alpaca account connection, live order, automation or deployment.
+
+Cimphawng Trade is a multi-asset terminal for real-time signals, order review and opt-in execution. Launch with Alpaca paper accounts, then promote each live capability independently. Keep a near-black institutional theme and an English/Zomi interface. The mark is now the gold-and-silver Cimphawng lockup, and the colour skin is set in Olbos Trade's brand layer, not here.
 
 ## Current baseline
 
@@ -41,7 +49,7 @@ flowchart TD
     Store --> UI
 ```
 
-Use the existing FastAPI/PostgreSQL direction, with separately runnable stream and execution workers from one versioned codebase. Use a transactional outbox to persist accepted intents before sending, and an inbox to deduplicate broker updates. Start with PostgreSQL queues and a small symbol universe. Introduce additional streaming infrastructure only when measurements justify it. The current private Site remains a preview; avoid operating two writers for the same account.
+Use FastAPI and PostgreSQL, with separately runnable stream and execution workers from one versioned codebase. (Since November 14 that codebase is Olbos Trade's; see the status note at the top.) Use a transactional outbox to persist accepted intents before sending, and an inbox to deduplicate broker updates. Start with PostgreSQL queues and a small symbol universe. Introduce additional streaming infrastructure only when measurements justify it. The current private Site remains a preview; avoid operating two writers for the same account. Cimphawng Trade users and Olbos Trade users are isolated by the platform's per-user and per-account rules, not by brand.
 
 Identity binds each app user to explicit broker connections. Start with owner-controlled Alpaca paper credentials in a secret store for integration tests, then use **Alpaca Connect OAuth** for existing customer accounts. Register the exact callback on the intended HTTPS domain; validate single-use, session-bound state, request minimum scopes, exchange codes on the server, and encrypt tokens. Bind account and environment server-side. Keep paper and live credentials, queues and UI sessions separated. Live access for other users and commercial use need the applicable Alpaca approvals. Evaluate Broker API separately only if embedded account opening is needed.
 
